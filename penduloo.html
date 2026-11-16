@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Diseño de controladores derivativos (D) · Material interactivo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+    <script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, svg: { fontCache: 'none' }, options: { enableMenu: false } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+    <style>
+        :root {
+            --bg: #eef1f6;
+            --g1: #d6e4ff;
+            --card: #fff;
+            --tx: #0f172a;
+            --mu: #64748b;
+            --bd: #e2e8f0;
+            --ac: #2563eb;
+            --ok: #059669;
+            --bad: #dc2626;
+            --wr: #d97706;
+            --rb: #334155;
+            --sky1: #e3edff;
+            --sky2: #f8fbff;
+            --gnd: #dde5f0;
+            --sh: 0 1px 2px rgba(15, 23, 42, .06), 0 10px 30px rgba(15, 23, 42, .07);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0a0f1f;
+                --g1: #16255a;
+                --card: #121a2e;
+                --tx: #e8edf7;
+                --mu: #8b97b3;
+                --bd: #233049;
+                --ac: #60a5fa;
+                --ok: #34d399;
+                --bad: #f87171;
+                --wr: #fbbf24;
+                --rb: #cbd5e1;
+                --sky1: #101a38;
+                --sky2: #0c1429;
+                --gnd: #17223d;
+                --sh: 0 10px 30px rgba(0, 0, 0, .35);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0a0f1f;
+            --g1: #16255a;
+            --card: #121a2e;
+            --tx: #e8edf7;
+            --mu: #8b97b3;
+            --bd: #233049;
+            --ac: #60a5fa;
+            --ok: #34d399;
+            --bad: #f87171;
+            --wr: #fbbf24;
+            --rb: #cbd5e1;
+            --sky1: #101a38;
+            --sky2: #0c1429;
+            --gnd: #17223d;
+            --sh: 0 10px 30px rgba(0, 0, 0, .35);
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        [hidden] {
+            display: none !important
+        }
+
+        body {
+            margin: 0;
+            color: var(--tx);
+            font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(1100px 520px at 12% -8%, var(--g1), transparent 70%), var(--bg);
+            min-height: 100vh
+        }
+
+        .wrap {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 22px 20px 40px
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 18px
+        }
+
+        .eyebrow {
+            font-size: .75rem;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ac);
+            font-weight: 700
+        }
+
+        h1 {
+            margin: 2px 0 2px;
+            font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+            letter-spacing: -.02em;
+            line-height: 1.1
+        }
+
+        header p {
+            margin: 0;
+            color: var(--mu)
+        }
+
+        .hr {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: .88rem;
+            border: 1px solid currentColor
+        }
+
+        .pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor
+        }
+
+        .pill.ok {
+            color: var(--ok);
+            background: color-mix(in srgb, var(--ok) 12%, transparent)
+        }
+
+        .pill.bad {
+            color: var(--bad);
+            background: color-mix(in srgb, var(--bad) 12%, transparent)
+        }
+
+        .pill.wr {
+            color: var(--wr);
+            background: color-mix(in srgb, var(--wr) 12%, transparent)
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(12, 1fr);
+            margin-bottom: 16px
+        }
+
+        .c7 {
+            grid-column: span 7
+        }
+
+        .c5 {
+            grid-column: span 5
+        }
+
+        .c6 {
+            grid-column: span 6
+        }
+
+        .c4 {
+            grid-column: span 4
+        }
+
+        .c3 {
+            grid-column: span 3
+        }
+
+        .c12 {
+            grid-column: span 12
+        }
+
+        @media(max-width:1000px) {
+
+            .c7,
+            .c5,
+            .c6,
+            .c4,
+            .c3 {
+                grid-column: span 12
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: var(--sh);
+            min-width: 0
+        }
+
+        .card h2 {
+            margin: 0 0 10px;
+            font-size: .72rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--mu);
+            font-weight: 700
+        }
+
+        canvas {
+            display: block;
+            width: 100%
+        }
+
+        .scene {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--bd);
+            background: linear-gradient(var(--sky1), var(--sky2))
+        }
+
+        .hud {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            z-index: 2
+        }
+
+        .hc {
+            background: color-mix(in srgb, var(--card) 88%, transparent);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 3px 10px;
+            line-height: 1.25;
+            backdrop-filter: blur(4px)
+        }
+
+        .hc small {
+            display: block;
+            font-size: .65rem;
+            color: var(--mu);
+            letter-spacing: .06em
+        }
+
+        .hc b {
+            font: 700 .9rem "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace
+        }
+
+        .bdg {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+            z-index: 2
+        }
+
+        .bdg span {
+            font-size: .75rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 99px;
+            background: var(--wr);
+            color: #111
+        }
+
+        .fall {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            background: color-mix(in srgb, var(--bg) 65%, transparent);
+            backdrop-filter: blur(2px);
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--bad);
+            text-align: center;
+            padding: 20px
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        .sp {
+            flex: 1
+        }
+
+        .btn {
+            font: inherit;
+            font-weight: 600;
+            font-size: .88rem;
+            border: 1px solid var(--bd);
+            background: var(--card);
+            color: var(--tx);
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .btn:hover {
+            border-color: var(--ac);
+            transform: translateY(-1px)
+        }
+
+        .btn.pri {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .ib {
+            width: 38px;
+            padding: 8px 0;
+            text-align: center
+        }
+
+        kbd {
+            font: 600 .68rem "JetBrains Mono", monospace;
+            border: 1px solid currentColor;
+            border-radius: 5px;
+            padding: 0 5px;
+            margin-left: 6px;
+            opacity: .6
+        }
+
+        .tog {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            font-size: .88rem;
+            cursor: pointer
+        }
+
+        .tog input {
+            accent-color: var(--ac);
+            width: 16px;
+            height: 16px
+        }
+
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px
+        }
+
+        .chip {
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 600;
+            border: 1px solid var(--bd);
+            background: transparent;
+            color: var(--tx);
+            padding: 6px 12px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .chip:hover {
+            border-color: var(--ac);
+            color: var(--ac)
+        }
+
+        .row {
+            margin: 10px 0
+        }
+
+        .rl {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 2px
+        }
+
+        .rl .lab {
+            font-size: 1.05rem;
+            min-width: 36px
+        }
+
+        .rl small {
+            color: var(--mu);
+            flex: 1;
+            font-size: .78rem
+        }
+
+        .rl output {
+            font: 700 .92rem "JetBrains Mono", monospace;
+            color: var(--ac)
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--ac);
+            height: 20px;
+            margin: 0
+        }
+
+        .tgs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--bd)
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        @media(max-width:900px) {
+            .steps {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .step {
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 12px;
+            position: relative;
+            min-width: 0
+        }
+
+        .step .n {
+            position: absolute;
+            top: -10px;
+            left: 12px;
+            background: var(--ac);
+            color: #fff;
+            font-weight: 700;
+            font-size: .72rem;
+            border-radius: 99px;
+            padding: 1px 10px
+        }
+
+        .step p {
+            margin: 4px 0 0;
+            font-size: .82rem;
+            color: var(--mu)
+        }
+
+        .live {
+            border: 1px solid var(--ac);
+            border-radius: 14px;
+            padding: 12px 16px;
+            background: color-mix(in srgb, var(--ac) 6%, transparent)
+        }
+
+        .lv {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+            align-items: center
+        }
+
+        @media(max-width:900px) {
+            .lv {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .eqs {
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%
+        }
+
+        mjx-container {
+            max-width: 100%
+        }
+
+        mjx-container[display="true"] {
+            margin: .5em 0 !important
+        }
+
+        .conds {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 6px
+        }
+
+        .cond {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            border: 1px solid currentColor;
+            font-weight: 600;
+            font-size: .9rem
+        }
+
+        .cond.ok {
+            color: var(--ok)
+        }
+
+        .cond.bad {
+            color: var(--bad)
+        }
+
+        .lg {
+            font-size: .78rem;
+            color: var(--mu);
+            margin-top: 6px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap
+        }
+
+        .lg i {
+            display: inline-block;
+            width: 14px;
+            height: 3px;
+            border-radius: 2px;
+            margin-right: 5px;
+            vertical-align: middle
+        }
+
+        ul.log {
+            list-style: none;
+            margin: 0;
+            padding: 0
+        }
+
+        ul.log li {
+            display: grid;
+            grid-template-columns: 90px 1fr 1.4fr;
+            gap: 12px;
+            align-items: center;
+            padding: 6px 0;
+            border-top: 1px solid var(--bd);
+            font-size: .88rem
+        }
+
+        ul.log li:first-child {
+            border-top: 0;
+            font-weight: 600
+        }
+
+        ul.log li.old {
+            opacity: .7
+        }
+
+        .lt {
+            font-family: "JetBrains Mono", monospace;
+            color: var(--mu);
+            font-size: .8rem
+        }
+
+        .note {
+            font-size: .82rem;
+            color: var(--mu);
+            margin: 0
+        }
+
+        @media(max-width:700px) {
+            ul.log li {
+                grid-template-columns: 1fr
+            }
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        .nav {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 0 0 16px
+        }
+
+        .nav a {
+            font-size: .85rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            background: var(--card);
+            padding: 7px 14px;
+            border-radius: 99px;
+            transition: .15s
+        }
+
+        .nav a:hover {
+            border-color: var(--ac);
+            color: var(--ac)
+        }
+
+        .keys {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px
+        }
+
+        @media(max-width:900px) {
+            .keys {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .key {
+            border: 1px solid var(--bd);
+            background: var(--card);
+            border-radius: 14px;
+            padding: 12px 14px;
+            box-shadow: var(--sh)
+        }
+
+        .key b {
+            display: block;
+            margin-bottom: 2px
+        }
+
+        .key span {
+            font-size: .85rem;
+            color: var(--mu)
+        }
+
+        .sh {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 14px
+        }
+
+        .sh .num {
+            flex: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--ac);
+            color: #fff;
+            font-weight: 700;
+            display: grid;
+            place-items: center
+        }
+
+        .sh h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            letter-spacing: -.01em
+        }
+
+        .sh p {
+            margin: 0;
+            color: var(--mu);
+            font-size: .9rem
+        }
+
+        .two {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 18px;
+            align-items: start
+        }
+
+        @media(max-width:900px) {
+            .two {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .rd {
+            font: 600 .8rem "JetBrains Mono", monospace;
+            color: var(--mu);
+            margin-top: 8px;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: nowrap
+        }
+
+        .warn {
+            color: var(--wr);
+            font-size: .85rem;
+            margin-top: 4px
+        }
+
+        body {
+            font-size: 14px
+        }
+
+        .wrap {
+            max-width: 1600px;
+            padding: 14px 16px 20px
+        }
+
+        header.top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px
+        }
+
+        header.top h1 {
+            font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+            margin: 0
+        }
+
+        .bento {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(12, minmax(0, 1fr))
+        }
+
+        .bento .card {
+            padding: 12px;
+            border-radius: 16px
+        }
+
+        .bento .card h2 {
+            margin-bottom: 8px
+        }
+
+        .t-rob {
+            grid-column: 1/6;
+            grid-row: 1/3;
+            display: flex;
+            flex-direction: column
+        }
+
+        .t-rob .scene {
+            flex: 1;
+            min-height: 420px
+        }
+
+        .t-ctl {
+            grid-column: 6/9;
+            grid-row: 1
+        }
+
+        .t-eq {
+            grid-column: 9/13;
+            grid-row: 1
+        }
+
+        .t-learn {
+            grid-column: 6/13;
+            grid-row: 2
+        }
+
+        .t-plot {
+            grid-column: 1/6;
+            grid-row: 3
+        }
+
+        .t-ps {
+            grid-column: 6/9;
+            grid-row: 3
+        }
+
+        .t-log {
+            grid-column: 9/13;
+            grid-row: 3
+        }
+
+        @media(max-width:1100px) {
+            .bento {
+                grid-template-columns: 1fr
+            }
+
+            .bento>* {
+                grid-column: auto !important;
+                grid-row: auto !important
+            }
+
+            .t-rob .scene {
+                min-height: 380px
+            }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap
+        }
+
+        .tab {
+            font: inherit;
+            font-weight: 600;
+            font-size: .85rem;
+            border: 1px solid var(--bd);
+            background: transparent;
+            color: var(--mu);
+            padding: 6px 14px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .tab:hover {
+            color: var(--ac);
+            border-color: var(--ac)
+        }
+
+        .tab.on {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .pane[hidden] {
+            display: none
+        }
+
+        .two {
+            gap: 14px
+        }
+
+        .pt {
+            margin: 0 0 2px;
+            font-size: .88rem
+        }
+
+        .mini {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 4px 10px;
+            margin-bottom: 6px;
+            font-size: .92rem
+        }
+
+        .mini b {
+            font-size: .68rem;
+            color: var(--mu);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            white-space: nowrap
+        }
+
+        .t-eq mjx-container[display="true"],
+        .t-learn mjx-container[display="true"] {
+            margin: .3em 0 !important;
+            font-size: 92%
+        }
+
+        .t-eq .live {
+            padding: 6px 12px
+        }
+
+        .pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px
+        }
+
+        .t-ps small {
+            color: var(--mu);
+            font-size: .72rem;
+            display: block;
+            margin-top: 2px
+        }
+
+        .t-log ul.log li {
+            grid-template-columns: 64px 1fr;
+            gap: 2px 10px;
+            padding: 5px 0
+        }
+
+        .t-log ul.log li span:nth-child(3) {
+            grid-column: 1/-1;
+            overflow-x: auto;
+            overflow-y: hidden
+        }
+
+        .row {
+            margin: 7px 0
+        }
+
+        .tgs {
+            margin-top: 10px;
+            padding-top: 10px;
+            gap: 6px
+        }
+
+        .chips {
+            margin-bottom: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header class="top">
+            <div>
+                <div class="eyebrow">Cibernética Electrónica · Material interactivo</div>
+                <h1>Diseño de controladores derivativos (D)</h1>
+            </div>
+            <div class="hr"><span id="pill" class="pill"></span><button id="theme" class="btn ib"
+                    title="Cambiar tema claro u oscuro">◐</button></div>
+        </header>
+
+        <main class="bento">
+
+            <section class="card t-rob">
+                <h2>Ejemplo 2 · Planta de péndulo invertido móvil (MIP) en tiempo real</h2>
+                <div class="scene">
+                    <div class="hud">
+                        <div class="hc"><small>INCLINACIÓN θ</small><b id="hth"></b></div>
+                        <div class="hc"><small>VEL. ANGULAR θ′</small><b id="hw"></b></div>
+                        <div class="hc"><small>ESFUERZO u</small><b id="hu"></b></div>
+                        <div class="hc"><small>VELOCIDAD</small><b id="hv"></b></div>
+                        <div class="hc"><small>TIEMPO</small><b id="ht"></b></div>
+                    </div>
+                    <div class="bdg"><span id="bp" hidden>Carga extra</span><span id="ba" hidden>Adaptando…</span></div>
+                    <div class="fall" id="fall" hidden>Pérdida de estabilidad · Ajusta las ganancias y pulsa Reiniciar
+                    </div>
+                    <canvas id="rob" data-fill style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                </div>
+                <div class="toolbar">
+                    <button id="push" class="btn pri">Empujón<kbd>P</kbd></button>
+                    <label class="tog"><input type="checkbox" id="step"><span>Esfuerzo externo</span></label>
+                    <button id="load" class="btn">Cambiar carga</button>
+                    <span class="sp"></span>
+                    <button id="pause" class="btn"><span id="pl">Pausar</span><kbd>␣</kbd></button>
+                    <button id="reset" class="btn">Reiniciar<kbd>R</kbd></button>
+                </div>
+            </section>
+
+            <aside class="card t-ctl">
+                <h2>Escenarios y parámetros</h2>
+                <div class="chips">
+                    <button class="chip" data-pre="ideal">Sin derivativo</button>
+                    <button class="chip" data-pre="sub">Subamortiguado</button>
+                    <button class="chip" data-pre="crit">Crítico</button>
+                    <button class="chip" data-pre="sobre">Sobreamortiguado</button>
+                    <button class="chip" data-pre="inest">Inestable</button>
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(a\)</span><small>inestabilidad de la planta</small><output
+                            id="aO"></output></div><input type="range" id="a" min="0.5" max="15" step="0.1" value="5">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(K_p\)</span><small>ganancia proporcional</small><output
+                            id="kpO"></output></div><input type="range" id="kp" min="0" max="30" step="0.1" value="12">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(K_d\)</span><small>amortiguamiento (giroscopio)</small><output
+                            id="kdO"></output></div><input type="range" id="kd" min="0" max="10" step="0.1" value="3">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">Mag.</span><small>empujón / esfuerzo externo</small><output
+                            id="mO"></output></div><input type="range" id="m" min="0" max="4" step="0.1" value="1.5">
+                </div>
+                <div class="tgs">
+                    <label class="tog"><input type="checkbox" id="ad"><span>Auto-adaptación de \(K_p\) y
+                            \(K_d\)</span></label>
+                    <label class="tog"><input type="checkbox" id="sat"><span>Saturar esfuerzo \((|u|\le
+                            15)\)</span></label>
+                </div>
+            </aside>
+
+            <section class="card t-eq">
+                <h2>Del modelo al lazo cerrado</h2>
+                <div class="mini"><b>1 · Planta</b><span>\(\ddot{\theta}=a\,\theta+u\)</span></div>
+                <div class="mini"><b>2 · Control PD</b><span>\(u=-K_p\,\theta-K_d\,\dot{\theta}\)</span></div>
+                <div class="mini"><b>3 · Lazo cerrado</b><span>\(\ddot{\theta}+K_d\dot{\theta}+(K_p-a)\theta=0\)</span>
+                </div>
+                <div class="live" id="eqlive">
+                    <div class="eqs" id="live"></div>
+                    <div class="eqs" id="poles"></div>
+                    <div class="conds" id="cond"></div>
+                </div>
+            </section>
+
+            <section class="card t-learn">
+                <div class="tabs">
+                    <button class="tab on" data-tab="0">① La acción D anticipa</button>
+                    <button class="tab" data-tab="1">② Ruido y filtro</button>
+                    <button class="tab" data-tab="2">③ Diseño de K<sub>d</sub></button>
+                </div>
+
+                <div class="pane" data-pane="0">
+                    <div class="two">
+                        <div><canvas id="cc" height="210"></canvas>
+                            <div class="rd" id="crd"></div>
+                            <div class="lg"><span><i style="background:var(--ac)"></i>error e(t)</span><span><i
+                                        style="background:var(--wr)"></i>predicción e + T<sub>d</sub>·ė</span><span>○
+                                    real e(t + T<sub>d</sub>)</span></div>
+                        </div>
+                        <div>
+                            <p class="pt"><b>El PD mira hacia dónde va el error:</b> actúa sobre el error que habrá
+                                dentro de \(T_d\) segundos.</p>
+                            <div class="eqs">\[u=K_p\Big(e+T_d\,\dot{e}\Big),\qquad T_d=\frac{K_d}{K_p}\]</div>
+                            <div class="eqs">\[e(t+T_d)\approx e(t)+T_d\,\dot{e}(t)\]</div>
+                            <div class="row">
+                                <div class="rl"><span class="lab">\(T_d\)</span><small>horizonte de
+                                        predicción</small><output id="tdO"></output></div><input type="range" id="td"
+                                    min="0" max="1.5" step="0.05" value="0.6">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pane" data-pane="1" hidden>
+                    <div class="two">
+                        <div><canvas id="nz" height="210"></canvas>
+                            <div class="rd" id="nrd"></div>
+                            <div class="lg"><span><i style="background:var(--tx)"></i>real</span><span><i
+                                        style="background:var(--bad)"></i>numérica</span><span><i
+                                        style="background:var(--ac)"></i>filtrada</span><span><i
+                                        style="background:var(--ok)"></i>giroscopio</span></div>
+                        </div>
+                        <div>
+                            <p class="pt"><b>Derivar amplifica el ruido:</b> \(|D(j\omega)|=K_d\,\omega\). Se filtra o
+                                se mide \(\dot\theta\) con el giroscopio.</p>
+                            <div class="eqs">\[D_f(s)=\frac{K_d\,s}{1+s/N}\]</div>
+                            <div class="row">
+                                <div class="rl"><span class="lab">σ</span><small>ruido del sensor de
+                                        ángulo</small><output id="nsO"></output></div><input type="range" id="ns"
+                                    min="0" max="1" step="0.05" value="0.3">
+                            </div>
+                            <div class="row">
+                                <div class="rl"><span class="lab">\(N\)</span><small>corte del filtro</small><output
+                                        id="nNO"></output></div><input type="range" id="nN" min="2" max="100" step="1"
+                                    value="20">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pane" data-pane="2" hidden>
+                    <div class="two">
+                        <div><canvas id="dc" height="210"></canvas>
+                            <div class="lg"><span><i style="background:var(--ac)"></i>respuesta de 2.º orden
+                                    diseñada</span><span><i style="background:var(--ok)"></i>banda ±2 %</span></div>
+                        </div>
+                        <div>
+                            <div class="row">
+                                <div class="rl"><span class="lab">\(M_p\)</span><small>sobreimpulso
+                                        máximo</small><output id="dmpO"></output></div><input type="range" id="dmp"
+                                    min="2" max="40" step="1" value="10">
+                            </div>
+                            <div class="row">
+                                <div class="rl"><span class="lab">\(t_s\)</span><small>tiempo de
+                                        establecimiento</small><output id="dtsO"></output></div><input type="range"
+                                    id="dts" min="0.5" max="6" step="0.1" value="2">
+                            </div>
+                            <div class="eqs" id="dtex"></div>
+                            <div class="warn" id="dwarn"></div>
+                            <button class="btn pri" id="apply" style="margin-top:6px">Aplicar al robot</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card t-plot">
+                <h2>Respuesta en el tiempo</h2><canvas id="plot" height="200"></canvas>
+                <div class="lg"><span><i style="background:var(--ac)"></i>θ (grados)</span><span><i
+                            style="background:var(--wr)"></i>u (escalado)</span></div>
+            </section>
+
+            <section class="card t-ps">
+                <h2>Plano de fase · Polos en s</h2>
+                <div class="pair">
+                    <div><canvas id="ph" height="200"></canvas><small>θ (horizontal) · θ′ (vertical)</small></div>
+                    <div><canvas id="sp" height="200"></canvas><small>× polos · verde = estable</small></div>
+                </div>
+            </section>
+
+            <section class="card t-log">
+                <h2>Bitácora: evolución de la ecuación</h2>
+                <ul class="log" id="log"></ul>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            var $ = function (i) { return document.getElementById(i) };
+            var P = { a: 5, kp: 12, kd: 3, m: 1.5 }, S = { th: 0.14, w: 0, t: 0, x: 0, v: 0, fallen: false, paused: false, payload: false, adapting: false, a0: 5, flash: 0 };
+            var hist = [], trail = [], logs = [], WIN = 8, DT = 1 / 600, pend = true, lastEq = 0, last = 0, elStep = $('step'), elSat = $('sat'), elAd = $('ad');
+            function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim() }
+            function tx(el) { if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]).catch(function () { }) } }
+            function f1(v) { return v.toFixed(1) }
+            function sg(v) { return (v < 0 ? '-' : '+') + '\\mathbf{' + Math.abs(v).toFixed(1) + '}' }
+            function eqS(p) { return '\\ddot{\\theta}+\\mathbf{' + f1(p.kd) + '}\\,\\dot{\\theta}' + sg(p.kp - p.a) + '\\,\\theta=0' }
+
+            /* ---------- física ---------- */
+            function ctrl(th, w) { var u = -P.kp * th - P.kd * w; if (elSat.checked) u = Math.max(-15, Math.min(15, u)); return u }
+            function f(th, w, d) { return [w, P.a * th + ctrl(th, w) + d] }
+            function step() {
+                var d = elStep.checked ? P.m : 0, h = DT, th = S.th, w = S.w;
+                var k1 = f(th, w, d), k2 = f(th + h / 2 * k1[0], w + h / 2 * k1[1], d), k3 = f(th + h / 2 * k2[0], w + h / 2 * k2[1], d), k4 = f(th + h * k3[0], w + h * k3[1], d);
+                S.th += h / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]); S.w += h / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]); S.t += h;
+                var uu = ctrl(S.th, S.w); S.v += (-0.15 * uu - 0.15 * S.v) * h; S.x += S.v * h;
+                if (Math.abs(S.th) > 1.45) S.fallen = true;
+            }
+            function record() {
+                hist.push([S.t, S.th, ctrl(S.th, S.w) + (elStep.checked ? P.m : 0)]);
+                while (hist.length && hist[0][0] < S.t - WIN) hist.shift();
+                trail.push([S.th, S.w]); if (trail.length > 500) trail.shift();
+            }
+
+            /* ---------- análisis y ecuaciones ---------- */
+            function analyze() {
+                var k = P.kp - P.a, d = P.kd * P.kd - 4 * k, c1 = P.kd > 0, c2 = P.kp > P.a, s, cl;
+                if (c1 && c2) { s = d < -1e-4 ? 'Estable · subamortiguado' : (d < 1e-4 ? 'Estable · amortiguamiento crítico' : 'Estable · sobreamortiguado'); s += ' · ζ = ' + (P.kd / (2 * Math.sqrt(k))).toFixed(2); cl = 'ok' }
+                else if (P.kd === 0 && c2) { s = 'Oscilación sostenida (caso ideal)'; cl = 'wr' }
+                else { s = 'Inestable · el robot cae'; cl = 'bad' }
+                var p = $('pill'); p.textContent = s; p.className = 'pill ' + cl; pend = true;
+            }
+            function renderEq() {
+                renderDesign();
+                var k = P.kp - P.a, d = P.kd * P.kd - 4 * k, mid = '\\ddot{\\theta}+' + f1(P.kd) + '\\,\\dot{\\theta}+(' + f1(P.kp) + '-' + f1(P.a) + ')\\,\\theta&=0';
+                $('live').innerHTML = '\\[\\begin{aligned}\\ddot{\\theta}+K_d\\,\\dot{\\theta}+(K_p-a)\\,\\theta&=0\\\\' + mid + '\\\\' + eqS(P).replace('=0', '&=0') + '\\end{aligned}\\]';
+                var pl;
+                if (d >= 1e-4) { pl = 's_1=' + ((-P.kd + Math.sqrt(d)) / 2).toFixed(2) + ',\\quad s_2=' + ((-P.kd - Math.sqrt(d)) / 2).toFixed(2) }
+                else if (d > -1e-4) { pl = 's_{1,2}=' + (-P.kd / 2).toFixed(2) + '\\ \\text{(doble)}' }
+                else { pl = 's_{1,2}=' + (-P.kd / 2).toFixed(2) + '\\pm ' + (Math.sqrt(-d) / 2).toFixed(2) + '\\,j' }
+                var h = '\\[' + pl + '\\]';
+                if (k > 0) {
+                    h += '\\[\\omega_n=\\sqrt{K_p-a}=' + Math.sqrt(k).toFixed(2) + ',\\qquad \\zeta=\\frac{K_d}{2\\sqrt{K_p-a}}=' + (P.kd / (2 * Math.sqrt(k))).toFixed(2) + '\\]';
+                    if (P.kd > 0) h += '\\[\\theta_{ss}=\\frac{d}{K_p-a}=\\frac{' + f1(P.m) + '}{' + f1(k) + '}=' + (P.m / k * 57.2958).toFixed(1) + '^{\\circ}\\]'
+                }
+                $('poles').innerHTML = h;
+                var c1 = P.kd > 0, c2 = P.kp > P.a;
+                $('cond').innerHTML = '<span class="cond ' + (c1 ? 'ok' : 'bad') + '">\\(K_d&gt;0\\) ' + (c1 ? '✓' : '✗') + '</span><span class="cond ' + (c2 ? 'ok' : 'bad') + '">\\(K_p&gt;a\\) ' + (c2 ? '✓' : '✗') + '</span>';
+                tx($('eqlive'));
+            }
+            function addLog(w) {
+                logs.unshift({ t: S.t, w: w, e: eqS(P) }); if (logs.length > 6) logs.pop();
+                $('log').innerHTML = logs.map(function (l, i) { return '<li class="' + (i ? 'old' : '') + '"><span class="lt">t = ' + l.t.toFixed(1) + ' s</span><span>' + l.w + '</span><span>\\(' + l.e + '\\)</span></li>' }).join('');
+                tx($('log'));
+            }
+
+            /* ---------- controles ---------- */
+            function setP(id, v) { P[id] = v; $(id).value = v; $(id + 'O').textContent = v.toFixed(1); analyze() }
+            var names = { a: 'a', kp: 'K_p', kd: 'K_d', m: 'm' };
+            ['a', 'kp', 'kd', 'm'].forEach(function (id) {
+                var el = $(id);
+                el.addEventListener('input', function () { P[id] = +el.value; $(id + 'O').textContent = (+el.value).toFixed(1); analyze() });
+                el.addEventListener('change', function () { if (id !== 'm') addLog('\\(' + names[id] + '=' + (+el.value).toFixed(1) + '\\)') });
+                $(id + 'O').textContent = (+el.value).toFixed(1);
+            });
+            function doReset() { S.th = 0.14; S.w = 0; S.t = 0; S.x = 0; S.v = 0; S.fallen = false; hist = []; trail = [] }
+            $('push').onclick = function () { if (!S.fallen) { S.w += P.m; S.flash = performance.now() + 500; addLog('empujón de ' + f1(P.m) + ' rad/s') } };
+            elStep.onchange = function () { addLog(elStep.checked ? 'esfuerzo externo activado' : 'esfuerzo externo retirado') };
+            elSat.onchange = function () { addLog(elSat.checked ? 'saturación activada' : 'saturación desactivada') };
+            $('reset').onclick = function () { doReset(); addLog('reinicio') };
+            $('pause').onclick = function () { S.paused = !S.paused; $('pl').textContent = S.paused ? 'Reanudar' : 'Pausar' };
+            $('load').onclick = function () {
+                var na; if (!S.payload) { S.a0 = P.a; na = Math.min(15, P.a * 2); S.payload = true } else { na = S.a0; S.payload = false }
+                setP('a', na); addLog((S.payload ? 'carga añadida' : 'carga retirada') + ': \\(a=' + f1(na) + '\\)');
+            };
+            elAd.onchange = function () { S.adapting = false; addLog(elAd.checked ? 'auto-adaptación activada' : 'auto-adaptación desactivada') };
+            var PRE = { ideal: function () { return [P.a + 7, 0] }, sub: function () { return [P.a + 9, 2.4] }, crit: function () { return [P.a + 9, 6] }, sobre: function () { return [P.a + 4, 8] }, inest: function () { return [Math.max(0, P.a - 2), 3] } };
+            document.querySelectorAll('[data-pre]').forEach(function (b) {
+                b.onclick = function () {
+                    elAd.checked = false; S.adapting = false; doReset(); var r = PRE[b.dataset.pre]();
+                    setP('kp', Math.min(30, r[0])); setP('kd', r[1]); addLog('escenario «' + b.textContent + '»');
+                }
+            });
+            $('theme').onclick = function () { var r = document.documentElement, c = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'); r.setAttribute('data-theme', c === 'dark' ? 'light' : 'dark') };
+            document.addEventListener('keydown', function (e) {
+                var t = e.target.tagName; if (t === 'INPUT' && e.target.type !== 'checkbox') return;
+                var k = e.key.toLowerCase();
+                if (k === 'p') { $('push').click() } else if (k === 'r') { $('reset').click() } else if (e.code === 'Space') { e.preventDefault(); if (t === 'BUTTON') e.target.blur(); $('pause').click() }
+            });
+            function adapt(dt) {
+                if (!elAd.checked) return;
+                var wn = 3.2, z = 0.7, tk = Math.min(30, P.a + wn * wn), td = 2 * z * wn, al = 1 - Math.exp(-dt / 0.8), diff = Math.abs(tk - P.kp) + Math.abs(td - P.kd);
+                if (diff > 0.05) {
+                    if (!S.adapting) { S.adapting = true; addLog('adaptando hacia \\(K_p=' + f1(tk) + ',\\ K_d=' + f1(td) + '\\)') }
+                    setP('kp', P.kp + (tk - P.kp) * al); setP('kd', P.kd + (td - P.kd) * al);
+                } else if (S.adapting) { S.adapting = false; setP('kp', tk); setP('kd', td); addLog('adaptación completa') }
+            }
+
+            /* ---------- dibujo ---------- */
+            function setup(c) {
+                var fl = c.hasAttribute('data-fill'), r = window.devicePixelRatio || 1, w = c.clientWidth, h = fl ? c.clientHeight : +(c.dataset.h || c.getAttribute('height')); if (!fl) { c.dataset.h = h; c.style.height = h + 'px' }
+                if (c.width !== Math.round(w * r) || c.height !== Math.round(h * r)) { c.width = Math.round(w * r); c.height = Math.round(h * r) }
+                var x = c.getContext('2d'); x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, w, h); return { x: x, w: w, h: h };
+            }
+
+            function rrect(x, px, py, w, h, r) {
+                x.beginPath(); x.moveTo(px + r, py); x.lineTo(px + w - r, py); x.quadraticCurveTo(px + w, py, px + w, py + r);
+                x.lineTo(px + w, py + h - r); x.quadraticCurveTo(px + w, py + h, px + w - r, py + h); x.lineTo(px + r, py + h);
+                x.quadraticCurveTo(px, py + h, px, py + h - r); x.lineTo(px, py + r); x.quadraticCurveTo(px, py, px + r, py); x.closePath();
+            }
+
+            function drawRobot() {
+                var c = setup($('rob')), x = c.x, W = c.w, H = c.h;
+                var dark = (document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light')) === 'dark';
+                var K = Math.max(1.05, Math.min(1.65, (H - 110) / 240)), gy = H - 46, cx = W * 0.5, R = 25 * K, L = 142, PPM = 135, wy = gy - R;
+
+                // Fondo técnico de laboratorio / retícula suave con paralaje
+                var off = S.x * PPM * 0.35, gridStep = 45, gx0 = -(off % gridStep);
+                x.strokeStyle = dark ? 'rgba(148,163,184,0.06)' : 'rgba(15,23,42,0.05)';
+                x.lineWidth = 1;
+                for (var gx = gx0; gx < W; gx += gridStep) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, gy); x.stroke() }
+                for (var gy2 = gy - gridStep; gy2 > 0; gy2 -= gridStep) { x.beginPath(); x.moveTo(0, gy2); x.lineTo(W, gy2); x.stroke() }
+
+                // Suelo y pista calibrada
+                var gndGrad = x.createLinearGradient(0, gy, 0, H);
+                gndGrad.addColorStop(0, dark ? '#18243d' : '#dce4f0');
+                gndGrad.addColorStop(1, dark ? '#0f172a' : '#cbd5e1');
+                x.fillStyle = gndGrad; x.fillRect(0, gy, W, H - gy);
+                x.strokeStyle = dark ? '#334155' : '#94a3b8'; x.lineWidth = 2;
+                x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke();
+
+                // Marcas métricas del piso
+                x.lineWidth = 1; x.fillStyle = css('--mu'); x.font = '600 10px "JetBrains Mono",monospace';
+                for (var m = Math.floor((S.x - W / 2 / PPM) * 4) / 4; m <= S.x + W / 2 / PPM + 0.5; m += 0.25) {
+                    var px = cx + (m - S.x) * PPM, wh = Math.abs(m % 1) < 1e-6, hf = Math.abs(m % 0.5) < 1e-6;
+                    x.strokeStyle = wh ? (dark ? '#64748b' : '#475569') : (dark ? '#334155' : '#94a3b8');
+                    x.beginPath(); x.moveTo(px, gy); x.lineTo(px, gy + (wh ? 11 : (hf ? 7 : 4))); x.stroke();
+                    if (wh) x.fillText(m.toFixed(0) + ' m', px - 10, gy + 24);
+                }
+
+                // Referencia vertical (eje de equilibrio θ = 0°) y arco angular
+                x.save();
+                x.strokeStyle = dark ? 'rgba(148,163,184,0.35)' : 'rgba(71,85,105,0.35)';
+                x.setLineDash([4, 4]); x.lineWidth = 1.2;
+                x.beginPath(); x.moveTo(cx, wy); x.lineTo(cx, wy - (L + 42) * K); x.stroke();
+                x.setLineDash([]);
+                // Arco graduado superior
+                var arcR = (L + 22) * K;
+                x.strokeStyle = dark ? 'rgba(148,163,184,0.22)' : 'rgba(71,85,105,0.22)';
+                x.beginPath(); x.arc(cx, wy, arcR, -Math.PI / 2 - 0.45, -Math.PI / 2 + 0.45); x.stroke();
+                if (Math.abs(S.th) > 0.015) {
+                    x.strokeStyle = S.fallen ? css('--bad') : css('--ac'); x.lineWidth = 2.5;
+                    x.beginPath(); x.arc(cx, wy, arcR, -Math.PI / 2, -Math.PI / 2 + S.th, S.th < 0); x.stroke();
+                }
+                x.restore();
+
+                // Sombra de contacto realista en el suelo
+                var shGrad = x.createRadialGradient(cx, gy + 1, 2, cx, gy + 1, 48 * K);
+                shGrad.addColorStop(0, 'rgba(0,0,0,0.32)');
+                shGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                x.fillStyle = shGrad; x.beginPath(); x.ellipse(cx, gy + 1, 48 * K, 6 * K, 0, 0, Math.PI * 2); x.fill();
+
+                // ================= CUERPO DEL ROBOT (PÉNDULO INVERTIDO REALISTA) =================
+                x.save(); x.translate(cx, wy); x.rotate(S.th); x.scale(K, K);
+
+                var ledColor = S.fallen ? css('--bad') : (Math.abs(S.th) < 0.04 && Math.abs(S.w) < 0.1 ? css('--ok') : css('--ac'));
+
+                // Degradados metálicos para piezas estructurales
+                var alumGrad = x.createLinearGradient(-28, 0, 28, 0);
+                alumGrad.addColorStop(0, dark ? '#475569' : '#94a3b8');
+                alumGrad.addColorStop(0.3, dark ? '#94a3b8' : '#e2e8f0');
+                alumGrad.addColorStop(0.7, dark ? '#64748b' : '#cbd5e1');
+                alumGrad.addColorStop(1, dark ? '#334155' : '#64748b');
+
+                var darkMetal = x.createLinearGradient(-26, 0, 26, 0);
+                darkMetal.addColorStop(0, '#0f172a');
+                darkMetal.addColorStop(0.5, '#334155');
+                darkMetal.addColorStop(1, '#1e293b');
+
+                // 1. Varillas estructurales (columnas de aluminio anodizado)
+                x.fillStyle = alumGrad;
+                x.fillRect(-20, -L + 10, 4.5, L - 22);
+                x.fillRect(15.5, -L + 10, 4.5, L - 22);
+
+                // 2. Bloque inferior: Caja de transmisión y motorreductor DC
+                x.fillStyle = darkMetal;
+                rrect(x, -25, -34, 50, 24, 4); x.fill();
+                x.strokeStyle = dark ? '#475569' : '#334155'; x.lineWidth = 1.2; x.stroke();
+                // Detalle de aletas de disipación del motor
+                x.strokeStyle = 'rgba(255,255,255,0.12)'; x.lineWidth = 1;
+                for (var f = -18; f <= 18; f += 6) { x.beginPath(); x.moveTo(f, -31); x.lineTo(f, -13); x.stroke() }
+
+                // 3. Plataforma intermedia: Batería LiPo + Controlador embebido
+                // Paquete de batería LiPo (nivel inferior-medio)
+                x.fillStyle = dark ? '#1e3a8a' : '#1d4ed8';
+                rrect(x, -17, -62, 34, 15, 2.5); x.fill();
+                x.strokeStyle = 'rgba(255,255,255,0.25)'; x.lineWidth = 1; x.stroke();
+                x.fillStyle = 'rgba(255,255,255,0.75)'; x.font = '700 6.5px "JetBrains Mono",monospace';
+                x.fillText('LiPo 11.1V', -14.5, -52.5);
+
+                // Placa intermedia de aluminio
+                x.fillStyle = alumGrad;
+                rrect(x, -25, -47, 50, 5, 2); x.fill();
+
+                // Nivel medio-superior: Microcontrolador / Driver de potencia (PCB)
+                x.fillStyle = '#065f46';
+                rrect(x, -18, -86, 36, 12, 2); x.fill();
+                // Microcontrolador SMD y condensadores
+                x.fillStyle = '#0f172a'; x.fillRect(-7, -84, 14, 8);
+                x.fillStyle = '#d97706'; x.fillRect(-14, -83, 4, 6); x.fillRect(10, -83, 4, 6);
+
+                // Placa de soporte medio
+                x.fillStyle = alumGrad;
+                rrect(x, -25, -74, 50, 5, 2); x.fill();
+
+                // 4. Módulo superior: Unidad IMU (Giroscopio + Acelerómetro)
+                x.fillStyle = darkMetal;
+                rrect(x, -23, -L + 14, 46, 24, 4); x.fill();
+                x.strokeStyle = dark ? '#64748b' : '#475569'; x.lineWidth = 1.2; x.stroke();
+
+                // Visor técnico de estado de la IMU
+                x.fillStyle = '#090d16';
+                rrect(x, -16, -L + 19, 32, 14, 2.5); x.fill();
+
+                // LED de estado del controlador (verde/azul = estable, rojo = caída)
+                x.fillStyle = ledColor;
+                x.beginPath(); x.arc(-10, -L + 26, 2.8, 0, Math.PI * 2); x.fill();
+                x.save(); x.shadowColor = ledColor; x.shadowBlur = 6; x.fill(); x.restore();
+
+                // Etiqueta IMU / 6-DOF
+                x.fillStyle = '#cbd5e1'; x.font = '700 6.5px "JetBrains Mono",monospace';
+                x.fillText('IMU 6DOF', -4, -L + 28.5);
+
+                // 5. Plataforma superior (Top Deck) con tornillería
+                x.fillStyle = alumGrad;
+                rrect(x, -27, -L + 8, 54, 6, 2.5); x.fill();
+                x.strokeStyle = dark ? '#475569' : '#64748b'; x.lineWidth = 1; x.stroke();
+                // Tornillos Allen en las placas
+                x.fillStyle = '#1e293b';
+                [-21, 21].forEach(function (sx) {
+                    [-L + 11, -71.5, -44.5].forEach(function (sy) {
+                        x.beginPath(); x.arc(sx, sy, 1.5, 0, Math.PI * 2); x.fill();
+                    });
+                });
+
+                // 6. Carga útil (Payload) o Antena de telemetría
+                if (S.payload) {
+                    // Masa calibrada industrial con franjas de precaución
+                    var massGrad = x.createLinearGradient(-22, -L - 20, 22, -L - 20);
+                    massGrad.addColorStop(0, '#b45309');
+                    massGrad.addColorStop(0.5, '#f59e0b');
+                    massGrad.addColorStop(1, '#b45309');
+                    x.fillStyle = massGrad;
+                    rrect(x, -21, -L - 20, 42, 28, 3); x.fill();
+                    x.strokeStyle = '#78350f'; x.lineWidth = 1.5; x.stroke();
+                    // Placa identificativa de masa
+                    x.fillStyle = '#0f172a'; x.fillRect(-15, -L - 11, 30, 10);
+                    x.fillStyle = '#fbbf24'; x.font = '700 7px "JetBrains Mono",monospace';
+                    x.fillText('MASA +Δm', -13.5, -L - 3.5);
+                } else {
+                    // Antena SMA de telemetría
+                    x.fillStyle = '#475569'; x.fillRect(14, -L + 3, 4, 5);
+                    x.fillStyle = '#1e293b'; x.fillRect(14.8, -L - 14, 2.4, 17);
+                    x.fillStyle = ledColor; x.beginPath(); x.arc(16, -L - 15, 2, 0, Math.PI * 2); x.fill();
+                }
+                x.restore();
+
+                // ================= RUEDA MOTRIZ DE ALTA PRECISIÓN =================
+                var rot = S.x * PPM / R;
+                x.save(); x.translate(cx, wy);
+                // Neumático de caucho exterior
+                x.fillStyle = '#1e293b'; x.beginPath(); x.arc(0, 0, R, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = '#0f172a'; x.lineWidth = 2.5; x.stroke();
+
+                // Banda de rodadura / muescas que giran
+                x.save(); x.rotate(rot);
+                x.strokeStyle = '#334155'; x.lineWidth = 2;
+                for (var t = 0; t < 12; t++) {
+                    var ta = t * Math.PI / 6;
+                    x.beginPath(); x.moveTo((R - 4) * Math.cos(ta), (R - 4) * Math.sin(ta));
+                    x.lineTo((R - 0.5) * Math.cos(ta), (R - 0.5) * Math.sin(ta)); x.stroke();
+                }
+
+                // Rin metálico interior
+                var rimR = R * 0.68;
+                x.fillStyle = dark ? '#334155' : '#cbd5e1';
+                x.beginPath(); x.arc(0, 0, rimR, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = dark ? '#64748b' : '#64748b'; x.lineWidth = 1.5; x.stroke();
+
+                // Radios estructurales del rin
+                x.strokeStyle = dark ? '#94a3b8' : '#475569'; x.lineWidth = 2.4;
+                for (var j = 0; j < 5; j++) {
+                    var an = j * (Math.PI * 2 / 5);
+                    x.beginPath(); x.moveTo(0, 0); x.lineTo(rimR * Math.cos(an), rimR * Math.sin(an)); x.stroke();
+                }
+                x.restore();
+
+                // Eje central y tuerca de acople
+                x.fillStyle = css('--ac'); x.beginPath(); x.arc(0, 0, 6.5 * K * 0.85, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#0f172a'; x.beginPath(); x.arc(0, 0, 2.5 * K * 0.85, 0, Math.PI * 2); x.fill();
+                x.restore();
+
+                // ================= VECTORES DE FUERZA Y PAR =================
+                // Vector de esfuerzo de control (u) en el eje motriz
+                var u = ctrl(S.th, S.w), len = Math.max(-95, Math.min(95, -u * 5.2)), s = len > 0 ? 1 : -1;
+                if (Math.abs(len) > 4) {
+                    x.strokeStyle = css('--wr'); x.fillStyle = css('--wr'); x.lineWidth = 3.5;
+                    x.beginPath(); x.moveTo(cx, wy); x.lineTo(cx + len, wy); x.stroke();
+                    x.beginPath(); x.moveTo(cx + len + 10 * s, wy); x.lineTo(cx + len, wy - 6); x.lineTo(cx + len, wy + 6); x.fill();
+                    x.font = '700 11px "JetBrains Mono",monospace';
+                    x.fillText('u', cx + len + (s > 0 ? 14 : -20), wy + 4);
+                }
+
+                // Vector de perturbación externa
+                if (elStep.checked || performance.now() < S.flash) {
+                    var ey = wy - L * K * 0.72;
+                    x.strokeStyle = css('--bad'); x.fillStyle = css('--bad'); x.lineWidth = 3.5;
+                    x.beginPath(); x.moveTo(cx - 115, ey); x.lineTo(cx - 46, ey); x.stroke();
+                    x.beginPath(); x.moveTo(cx - 35, ey); x.lineTo(cx - 48, ey - 6.5); x.lineTo(cx - 48, ey + 6.5); x.fill();
+                    x.font = '600 11px Inter,system-ui,sans-serif';
+                    x.fillText('Perturbación (d)', cx - 124, ey - 10);
+                }
+            }
+
+            function drawPlot() {
+                var c = setup($('plot')), x = c.x, W = c.w, H = c.h, pl = 42, pr = 42, pt = 12, pb = 24, iw = W - pl - pr, ih = H - pt - pb, m = 10, mu = 2, t0 = S.t - WIN;
+                hist.forEach(function (p) { m = Math.max(m, Math.abs(p[1]) * 57.3 * 1.1); mu = Math.max(mu, Math.abs(p[2]) * 1.1) }); m = Math.min(m, 120);
+                x.lineWidth = 1; x.strokeStyle = css('--bd'); x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif';
+                for (var g = 0; g <= 4; g++) { var yy = pt + ih * g / 4; x.beginPath(); x.moveTo(pl, yy); x.lineTo(pl + iw, yy); x.stroke() }
+                x.strokeStyle = css('--mu'); x.globalAlpha = 0.5; x.beginPath(); x.moveTo(pl, pt + ih / 2); x.lineTo(pl + iw, pt + ih / 2); x.stroke(); x.globalAlpha = 1;
+                x.fillText(m.toFixed(0) + '°', 4, pt + 10); x.fillText('-' + m.toFixed(0) + '°', 4, pt + ih); x.fillText('0', pl - 12, pt + ih / 2 + 4);
+                x.fillText(mu.toFixed(0), pl + iw + 6, pt + 10); x.fillText('-' + mu.toFixed(0), pl + iw + 6, pt + ih);
+                x.fillText(Math.max(0, t0).toFixed(0) + ' s', pl, H - 6); x.fillText(S.t.toFixed(0) + ' s', pl + iw - 22, H - 6);
+                function line(idx, sc, col) {
+                    x.strokeStyle = col; x.lineWidth = 2.2; x.lineJoin = 'round'; x.beginPath();
+                    hist.forEach(function (p, i) { var px = pl + (p[0] - t0) / WIN * iw, v = idx === 1 ? p[1] * 57.3 : p[2], py = pt + ih / 2 - Math.max(-1.05, Math.min(1.05, v / sc)) * ih / 2; i ? x.lineTo(px, py) : x.moveTo(px, py) }); x.stroke()
+                }
+                x.save(); x.beginPath(); x.rect(pl, pt, iw, ih); x.clip(); line(2, mu, css('--wr')); line(1, m, css('--ac')); x.restore();
+            }
+            function drawPhase() {
+                var c = setup($('ph')), x = c.x, W = c.w, H = c.h, cx = W / 2, cy = H / 2;
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; x.beginPath(); x.moveTo(8, cy); x.lineTo(W - 8, cy); x.moveTo(cx, 8); x.lineTo(cx, H - 8); x.stroke();
+                function pp(p) { return [cx + Math.max(-1.2, Math.min(1.2, p[0] / 0.6)) * (W / 2.2), cy - Math.max(-1.2, Math.min(1.2, p[1] / 3)) * (H / 2.2)] }
+                x.strokeStyle = css('--ac'); x.lineWidth = 1.8; x.beginPath(); trail.forEach(function (p, i) { var q = pp(p); i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]) }); x.stroke();
+                var l = trail[trail.length - 1]; if (l) { var q = pp(l); x.fillStyle = css('--ac'); x.beginPath(); x.arc(q[0], q[1], 4.5, 0, 7); x.fill() }
+            }
+            function drawS() {
+                var c = setup($('sp')), x = c.x, W = c.w, H = c.h, cx = W / 2, cy = H / 2, sx = (W / 2 - 12) / 6, sy = (H / 2 - 12) / 6;
+                x.globalAlpha = 0.09; x.fillStyle = css('--ok'); x.fillRect(0, 0, cx, H); x.fillStyle = css('--bad'); x.fillRect(cx, 0, W - cx, H); x.globalAlpha = 1;
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; for (var g = -6; g <= 6; g++) { x.beginPath(); x.moveTo(cx + g * sx, 0); x.lineTo(cx + g * sx, H); x.moveTo(0, cy + g * sy); x.lineTo(W, cy + g * sy); x.stroke() }
+                x.strokeStyle = css('--mu'); x.lineWidth = 1.5; x.beginPath(); x.moveTo(0, cy); x.lineTo(W, cy); x.moveTo(cx, 0); x.lineTo(cx, H); x.stroke();
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('Re', W - 20, cy - 6); x.fillText('Im', cx + 6, 14);
+                var k = P.kp - P.a, d = P.kd * P.kd - 4 * k, ps = [];
+                if (d >= 0) { ps.push([(-P.kd + Math.sqrt(d)) / 2, 0], [(-P.kd - Math.sqrt(d)) / 2, 0]) } else { ps.push([-P.kd / 2, Math.sqrt(-d) / 2], [-P.kd / 2, -Math.sqrt(-d) / 2]) }
+                ps.forEach(function (p) {
+                    var px = cx + Math.max(-6, Math.min(6, p[0])) * sx, py = cy - Math.max(-6, Math.min(6, p[1])) * sy, ok = p[0] < 0;
+                    x.strokeStyle = ok ? css('--ok') : css('--bad'); x.lineWidth = 3; x.beginPath(); x.moveTo(px - 6, py - 6); x.lineTo(px + 6, py + 6); x.moveTo(px + 6, py - 6); x.lineTo(px - 6, py + 6); x.stroke()
+                });
+            }
+            function hud() {
+                $('hth').textContent = (S.th * 57.2958).toFixed(1) + '°'; $('hw').textContent = S.w.toFixed(2); $('hu').textContent = ctrl(S.th, S.w).toFixed(1);
+                $('hv').textContent = S.v.toFixed(2) + ' m/s'; $('ht').textContent = S.t.toFixed(1) + ' s';
+                $('bp').hidden = !S.payload; $('ba').hidden = !S.adapting; $('fall').hidden = !S.fallen;
+            }
+            function frame(ts) {
+                var dt = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
+                if (!S.paused && !S.fallen) { adapt(dt); var n = Math.round(dt / DT); for (var i = 0; i < n && !S.fallen; i++)step(); record() }
+                if (pend && ts - lastEq > 140) { pend = false; lastEq = ts; renderEq() }
+                hud(); if (TAB === 0) drawConcept(); if (TAB === 1) drawNoise(); if (TAB === 2) drawDesign(); drawRobot(); drawPlot(); drawPhase(); drawS();
+                requestAnimationFrame(frame);
+            }
+            /* ---------- 1 · concepto ---------- */
+            var C = { td: 0.6 };
+            function ef(t) { return Math.exp(-0.28 * t) * Math.cos(1.9 * t) }
+            function efd(t) { return Math.exp(-0.28 * t) * (-0.28 * Math.cos(1.9 * t) - 1.9 * Math.sin(1.9 * t)) }
+            function drawConcept() {
+                var c = setup($('cc')), x = c.x, W = c.w, H = c.h, pl = 30, pr = 14, pt = 14, pb = 26, iw = W - pl - pr, ih = H - pt - pb, T = 8, Td = C.td;
+                var tc = (performance.now() / 1000 * 0.6) % (T - 1.6);
+                function X(t) { return pl + t / T * iw } function Y(v) { return pt + ih / 2 - v * ih / 2.2 }
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; x.beginPath(); x.moveTo(pl, Y(0)); x.lineTo(pl + iw, Y(0)); x.stroke();
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('t', pl + iw - 8, Y(0) - 6); x.fillText('e', 8, pt + 8);
+                x.strokeStyle = css('--ac'); x.lineWidth = 2.4; x.beginPath();
+                for (var t = 0; t <= T; t += 0.05) { var px = X(t), py = Y(ef(t)); if (t === 0) x.moveTo(px, py); else x.lineTo(px, py) }
+                x.stroke();
+                var e0 = ef(tc), s = efd(tc), pd = e0 + Td * s, real = ef(tc + Td);
+                x.setLineDash([4, 4]); x.strokeStyle = css('--mu'); x.lineWidth = 1.2; x.beginPath(); x.moveTo(X(tc), Y(0)); x.lineTo(X(tc), Y(e0)); x.moveTo(X(tc + Td), Y(pd)); x.lineTo(X(tc + Td), Y(real)); x.stroke(); x.setLineDash([]);
+                x.strokeStyle = css('--wr'); x.lineWidth = 3; x.beginPath(); x.moveTo(X(tc), Y(e0)); x.lineTo(X(tc + Td), Y(pd)); x.stroke();
+                x.fillStyle = css('--ac'); x.beginPath(); x.arc(X(tc), Y(e0), 5, 0, 7); x.fill();
+                x.fillStyle = css('--wr'); x.beginPath(); x.arc(X(tc + Td), Y(pd), 5.5, 0, 7); x.fill();
+                x.strokeStyle = css('--ac'); x.lineWidth = 2; x.beginPath(); x.arc(X(tc + Td), Y(real), 6.5, 0, 7); x.stroke();
+                $('crd').textContent = 'e = ' + e0.toFixed(2) + '   ė = ' + s.toFixed(2) + '   predicción = ' + pd.toFixed(2) + '   real = ' + real.toFixed(2);
+            }
+
+            /* ---------- 2 · ruido y filtro ---------- */
+            var NZ = { s: 0.3, N: 20, dt: 0.01, K: 400, n1: [], n2: [], th: [], dth: [], R: null, e: [0, 0, 0] };
+            (function () {
+                var s = 7; function r() { s = (s * 16807) % 2147483647; return s / 2147483647 }
+                function g() { return Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(6.2832 * r()) }
+                for (var k = 0; k < NZ.K; k++) { var t = k * NZ.dt, ex = Math.exp(-0.5 * t); NZ.n1.push(g()); NZ.n2.push(g()); NZ.th.push(0.14 * ex * Math.cos(3 * t)); NZ.dth.push(0.14 * ex * (-0.5 * Math.cos(3 * t) - 3 * Math.sin(3 * t))) }
+            })();
+            function calcNoise() {
+                var sg = NZ.s * Math.PI / 180, al = 1 - Math.exp(-NZ.N * NZ.dt), y = 0, pm = 0, R = { d: [], f: [], g: [] }, e = [0, 0, 0];
+                for (var k = 0; k < NZ.K; k++) {
+                    var m = NZ.th[k] + sg * NZ.n1[k], d = k ? (m - pm) / NZ.dt : 0, gy = NZ.dth[k] + 0.03 * NZ.n2[k], tr = NZ.dth[k];
+                    pm = m; y += al * (d - y); R.d.push(d); R.f.push(y); R.g.push(gy);
+                    e[0] += (d - tr) * (d - tr); e[1] += (y - tr) * (y - tr); e[2] += (gy - tr) * (gy - tr);
+                }
+                NZ.R = R; NZ.e = e.map(function (v) { return Math.sqrt(v / NZ.K) });
+                $('nrd').textContent = 'Error RMS (rad/s):  numérica ' + NZ.e[0].toFixed(2) + '   filtrada ' + NZ.e[1].toFixed(2) + '   giroscopio ' + NZ.e[2].toFixed(2);
+            }
+            function drawNoise() {
+                if (!NZ.R) return;
+                var c = setup($('nz')), x = c.x, W = c.w, H = c.h, pl = 34, pr = 14, pt = 12, pb = 26, iw = W - pl - pr, ih = H - pt - pb, M = 1.2;
+                function X(k) { return pl + k / (NZ.K - 1) * iw } function Y(v) { return pt + ih / 2 - Math.max(-1.1, Math.min(1.1, v / M)) * ih / 2 }
+                x.lineWidth = 1; x.strokeStyle = css('--bd'); x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif';
+                [-1, 0, 1].forEach(function (v) { x.beginPath(); x.moveTo(pl, Y(v)); x.lineTo(pl + iw, Y(v)); x.stroke(); x.fillText(v.toFixed(0), pl - 16, Y(v) + 4) });
+                x.fillText('θ′ (rad/s)', pl + 4, pt + 10); x.fillText('0', pl, H - 8); x.fillText('4 s', pl + iw - 20, H - 8);
+                function ln(a, col, w) { x.strokeStyle = col; x.lineWidth = w; x.lineJoin = 'round'; x.beginPath(); for (var k = 0; k < NZ.K; k++) { var px = X(k), py = Y(a[k]); if (k) x.lineTo(px, py); else x.moveTo(px, py) } x.stroke() }
+                x.save(); x.beginPath(); x.rect(pl, pt, iw, ih); x.clip();
+                x.globalAlpha = 0.55; ln(NZ.R.d, css('--bad'), 1); x.globalAlpha = 1;
+                ln(NZ.R.g, css('--ok'), 2); ln(NZ.R.f, css('--ac'), 2.2);
+                x.setLineDash([5, 4]); ln(NZ.dth, css('--tx'), 1.5); x.setLineDash([]);
+                x.restore();
+            }
+
+            /* ---------- 3 · diseño ---------- */
+            var D = { mp: 10, ts: 2, z: 0.6, wn: 3, kp: 15, kd: 3.6 };
+            function calcD() { var l = Math.log(D.mp / 100); D.z = -l / Math.sqrt(Math.PI * Math.PI + l * l); D.wn = 4 / (D.z * D.ts); D.kp = P.a + D.wn * D.wn; D.kd = 2 * D.z * D.wn }
+            function renderDesign() {
+                calcD();
+                $('dtex').innerHTML = '\\[\\zeta=\\frac{-\\ln M_p}{\\sqrt{\\pi^2+\\ln^2 M_p}}=' + D.z.toFixed(2) + '\\]\\[\\omega_n=\\frac{4}{\\zeta\\,t_s}=' + D.wn.toFixed(2) + ',\\quad K_p=a+\\omega_n^2=\\mathbf{' + D.kp.toFixed(1) + '}\\]\\[K_d=2\\,\\zeta\\,\\omega_n=\\mathbf{' + D.kd.toFixed(1) + '}\\]';
+                $('dwarn').textContent = (D.kp > 30 || D.kd > 10) ? 'Estos valores superan el rango de los deslizadores del simulador y se recortarán al aplicarlos.' : '';
+                tx($('dtex'));
+            }
+            function drawDesign() {
+                calcD();
+                var c = setup($('dc')), x = c.x, W = c.w, H = c.h, pl = 34, pr = 14, pt = 14, pb = 26, iw = W - pl - pr, ih = H - pt - pb, T = Math.max(2.2 * D.ts, 1), mp = D.mp / 100, ym = 1 + mp + 0.2;
+                function X(t) { return pl + t / T * iw } function Y(v) { return pt + ih - v / ym * ih }
+                x.globalAlpha = 0.14; x.fillStyle = css('--ok'); x.fillRect(pl, Y(1.02), iw, Y(0.98) - Y(1.02)); x.globalAlpha = 1;
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; x.beginPath(); x.moveTo(pl, Y(0)); x.lineTo(pl + iw, Y(0)); x.stroke();
+                x.setLineDash([5, 4]); x.strokeStyle = css('--mu'); x.beginPath(); x.moveTo(pl, Y(1)); x.lineTo(pl + iw, Y(1)); x.moveTo(X(D.ts), pt); x.lineTo(X(D.ts), pt + ih); x.stroke(); x.setLineDash([]);
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('1', pl - 12, Y(1) + 4); x.fillText('0', pl - 12, Y(0) + 4); x.fillText('ts = ' + D.ts.toFixed(1) + ' s', X(D.ts) + 4, pt + 12); x.fillText('t', pl + iw - 8, Y(0) - 6);
+                var sg = D.z * D.wn, wd = D.wn * Math.sqrt(1 - D.z * D.z);
+                x.strokeStyle = css('--ac'); x.lineWidth = 2.6; x.lineJoin = 'round'; x.beginPath();
+                for (var i = 0; i <= 240; i++) { var t = T * i / 240, y = 1 - Math.exp(-sg * t) * (Math.cos(wd * t) + sg / wd * Math.sin(wd * t)); if (i) x.lineTo(X(t), Y(y)); else x.moveTo(X(t), Y(y)) }
+                x.stroke();
+                var tp = Math.PI / wd; if (tp < T) { x.fillStyle = css('--wr'); x.beginPath(); x.arc(X(tp), Y(1 + mp), 5, 0, 7); x.fill(); x.fillText('Mp = ' + D.mp + ' %', X(tp) + 8, Y(1 + mp) - 4) }
+            }
+            function bind(id, dec, unit, fn) { var el = $(id); function u() { var v = +el.value; $(id + 'O').textContent = v.toFixed(dec) + unit; fn(v) } el.addEventListener('input', u); u() }
+            bind('td', 2, ' s', function (v) { C.td = v });
+            bind('ns', 2, '°', function (v) { NZ.s = v; calcNoise() });
+            bind('nN', 0, ' rad/s', function (v) { NZ.N = v; calcNoise() });
+            bind('dmp', 0, ' %', function (v) { D.mp = v; pend = true });
+            bind('dts', 1, ' s', function (v) { D.ts = v; pend = true });
+            $('apply').onclick = function () {
+                calcD(); elAd.checked = false; S.adapting = false; doReset();
+                setP('kp', Math.min(30, D.kp)); setP('kd', Math.min(10, D.kd));
+                addLog('diseño: \\(M_p=' + D.mp + '\\%,\\ t_s=' + D.ts.toFixed(1) + '\\ \\text{s}\\)');
+            };
+
+            var TAB = 0;
+            document.querySelectorAll('[data-tab]').forEach(function (b) {
+                b.onclick = function () {
+                    TAB = +b.dataset.tab;
+                    document.querySelectorAll('[data-tab]').forEach(function (o) { o.classList.toggle('on', o === b) });
+                    document.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = (+p.dataset.pane !== TAB) }); pend = true
+                }
+            });
+            analyze(); addLog('estado inicial \\((\\theta_0=8^{\\circ})\\)');
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>

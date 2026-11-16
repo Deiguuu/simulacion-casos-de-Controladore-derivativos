@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Posicionamiento de un servomotor de CD · Control PD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+    <script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, svg: { fontCache: 'none' }, options: { enableMenu: false } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+    <style>
+        :root {
+            --bg: #eef1f6;
+            --g1: #d6e4ff;
+            --card: #fff;
+            --tx: #0f172a;
+            --mu: #64748b;
+            --bd: #e2e8f0;
+            --ac: #2563eb;
+            --ok: #059669;
+            --bad: #dc2626;
+            --wr: #d97706;
+            --rb: #334155;
+            --sky1: #e3edff;
+            --sky2: #f8fbff;
+            --gnd: #dde5f0;
+            --sh: 0 1px 2px rgba(15, 23, 42, .06), 0 10px 30px rgba(15, 23, 42, .07);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0a0f1f;
+                --g1: #16255a;
+                --card: #121a2e;
+                --tx: #e8edf7;
+                --mu: #8b97b3;
+                --bd: #233049;
+                --ac: #60a5fa;
+                --ok: #34d399;
+                --bad: #f87171;
+                --wr: #fbbf24;
+                --rb: #cbd5e1;
+                --sky1: #101a38;
+                --sky2: #0c1429;
+                --gnd: #17223d;
+                --sh: 0 10px 30px rgba(0, 0, 0, .35);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0a0f1f;
+            --g1: #16255a;
+            --card: #121a2e;
+            --tx: #e8edf7;
+            --mu: #8b97b3;
+            --bd: #233049;
+            --ac: #60a5fa;
+            --ok: #34d399;
+            --bad: #f87171;
+            --wr: #fbbf24;
+            --rb: #cbd5e1;
+            --sky1: #101a38;
+            --sky2: #0c1429;
+            --gnd: #17223d;
+            --sh: 0 10px 30px rgba(0, 0, 0, .35);
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        [hidden] {
+            display: none !important
+        }
+
+        body {
+            margin: 0;
+            color: var(--tx);
+            font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(1100px 520px at 12% -8%, var(--g1), transparent 70%), var(--bg);
+            min-height: 100vh
+        }
+
+        .wrap {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 14px 16px 20px
+        }
+
+        header.top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px
+        }
+
+        .eyebrow {
+            font-size: .72rem;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ac);
+            font-weight: 700
+        }
+
+        h1 {
+            margin: 2px 0 0;
+            font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+            letter-spacing: -.02em;
+            line-height: 1.1
+        }
+
+        .hr {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: .85rem;
+            border: 1px solid currentColor
+        }
+
+        .pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor
+        }
+
+        .pill.ok {
+            color: var(--ok);
+            background: color-mix(in srgb, var(--ok) 12%, transparent)
+        }
+
+        .pill.bad {
+            color: var(--bad);
+            background: color-mix(in srgb, var(--bad) 12%, transparent)
+        }
+
+        .pill.wr {
+            color: var(--wr);
+            background: color-mix(in srgb, var(--wr) 12%, transparent)
+        }
+
+        .ok {
+            color: var(--ok)
+        }
+
+        .bad {
+            color: var(--bad)
+        }
+
+        .wr {
+            color: var(--wr)
+        }
+
+        .bento {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(12, minmax(0, 1fr))
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: var(--sh);
+            min-width: 0
+        }
+
+        .card h2 {
+            margin: 0 0 8px;
+            font-size: .7rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--mu);
+            font-weight: 700
+        }
+
+        .card h2.sub {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--bd)
+        }
+
+        canvas {
+            display: block;
+            width: 100%
+        }
+
+        .t-arm {
+            grid-column: 1/6;
+            grid-row: 1/3;
+            display: flex;
+            flex-direction: column
+        }
+
+        .t-ctl {
+            grid-column: 6/9;
+            grid-row: 1
+        }
+
+        .t-proc {
+            grid-column: 9/13;
+            grid-row: 1
+        }
+
+        .t-fig {
+            grid-column: 6/13;
+            grid-row: 2
+        }
+
+        .t-tab {
+            grid-column: 1/7;
+            grid-row: 3
+        }
+
+        .t-read {
+            grid-column: 7/13;
+            grid-row: 3
+        }
+
+        @media(max-width:1100px) {
+            .bento {
+                grid-template-columns: 1fr
+            }
+
+            .bento>* {
+                grid-column: auto !important;
+                grid-row: auto !important
+            }
+        }
+
+        .scene {
+            position: relative;
+            flex: 1;
+            min-height: 420px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--bd);
+            background: linear-gradient(var(--sky1), var(--sky2))
+        }
+
+        .hud {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            z-index: 2
+        }
+
+        .hc {
+            background: color-mix(in srgb, var(--card) 88%, transparent);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 3px 10px;
+            line-height: 1.25;
+            backdrop-filter: blur(4px)
+        }
+
+        .hc small {
+            display: block;
+            font-size: .62rem;
+            color: var(--mu);
+            letter-spacing: .06em
+        }
+
+        .hc b {
+            font: 700 .88rem "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 10px
+        }
+
+        .btn {
+            font: inherit;
+            font-weight: 600;
+            font-size: .86rem;
+            border: 1px solid var(--bd);
+            background: var(--card);
+            color: var(--tx);
+            padding: 7px 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .btn:hover {
+            border-color: var(--ac);
+            transform: translateY(-1px)
+        }
+
+        .btn.pri {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .ib {
+            width: 38px;
+            padding: 7px 0;
+            text-align: center
+        }
+
+        .sp {
+            flex: 1
+        }
+
+        kbd {
+            font: 600 .66rem "JetBrains Mono", monospace;
+            border: 1px solid currentColor;
+            border-radius: 5px;
+            padding: 0 5px;
+            margin-left: 6px;
+            opacity: .6
+        }
+
+        .tog {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            font-size: .86rem;
+            cursor: pointer
+        }
+
+        .tog input {
+            accent-color: var(--ac);
+            width: 16px;
+            height: 16px
+        }
+
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px
+        }
+
+        .chip,
+        .tab {
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 600;
+            border: 1px solid var(--bd);
+            background: transparent;
+            color: var(--tx);
+            padding: 5px 12px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .chip:hover,
+        .tab:hover {
+            border-color: var(--ac);
+            color: var(--ac)
+        }
+
+        .tab {
+            color: var(--mu)
+        }
+
+        .tab.on {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 8px
+        }
+
+        .row {
+            margin: 6px 0
+        }
+
+        .rl {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 1px
+        }
+
+        .rl .lab {
+            font-size: 1rem;
+            min-width: 34px
+        }
+
+        .rl small {
+            color: var(--mu);
+            flex: 1;
+            font-size: .76rem
+        }
+
+        .rl output {
+            font: 700 .88rem "JetBrains Mono", monospace;
+            color: var(--ac)
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--ac);
+            height: 18px;
+            margin: 0
+        }
+
+        .pt {
+            margin: 0 0 4px;
+            font-size: .88rem
+        }
+
+        mjx-container {
+            max-width: 100%
+        }
+
+        mjx-container[display="true"] {
+            margin: .3em 0 !important;
+            font-size: 92%
+        }
+
+        .eqs {
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%
+        }
+
+        .lg {
+            font-size: .76rem;
+            color: var(--mu);
+            margin-top: 5px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .lg i {
+            display: inline-block;
+            width: 14px;
+            height: 3px;
+            border-radius: 2px;
+            margin-right: 5px;
+            vertical-align: middle
+        }
+
+        .spec {
+            font-size: .78rem;
+            color: var(--mu);
+            line-height: 1.45;
+            margin: 4px 0 0
+        }
+
+        table.tb {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .84rem
+        }
+
+        .tb th,
+        .tb td {
+            padding: 5px 8px;
+            border-bottom: 1px solid var(--bd);
+            text-align: center;
+            vertical-align: middle
+        }
+
+        .tb th {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--mu)
+        }
+
+        .tb td:first-child,
+        .tb th:first-child {
+            text-align: left;
+            color: var(--mu)
+        }
+
+        .tb tr:last-child td {
+            border-bottom: 0
+        }
+
+        .tb .pd {
+            background: color-mix(in srgb, var(--ac) 7%, transparent)
+        }
+
+        .read {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 14px;
+            align-items: start
+        }
+
+        @media(max-width:700px) {
+            .read {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .read p {
+            margin: 0 0 8px;
+            font-size: .88rem
+        }
+
+        .kn {
+            border-left: 3px solid var(--ac);
+            padding: 4px 10px;
+            background: color-mix(in srgb, var(--ac) 7%, transparent);
+            border-radius: 0 8px 8px 0
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header class="top">
+            <div>
+                <div class="eyebrow">04 · Ejemplos aplicados · Cibernética Electrónica · Ejemplo 1</div>
+                <h1>Posicionamiento de un servomotor de CD</h1>
+            </div>
+            <div class="hr"><span id="pill" class="pill"></span><button id="theme" class="btn ib"
+                    title="Cambiar tema claro u oscuro">◐</button></div>
+        </header>
+
+        <main class="bento">
+
+            <section class="card t-arm">
+                <h2>Articulación de brazo robótico · respuesta al escalón en tiempo real</h2>
+                <div class="scene">
+                    <div class="hud">
+                        <div class="hc"><small>POSICIÓN θ</small><b id="hth"></b></div>
+                        <div class="hc"><small>REFERENCIA r</small><b id="hr"></b></div>
+                        <div class="hc"><small>ERROR e</small><b id="he"></b></div>
+                        <div class="hc"><small>TENSIÓN u</small><b id="hu"></b></div>
+                        <div class="hc"><small>TIEMPO</small><b id="ht"></b></div>
+                    </div>
+                    <canvas id="arm" data-fill style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                </div>
+                <div class="toolbar">
+                    <button id="go" class="btn pri">Aplicar escalón<kbd>E</kbd></button>
+                    <label class="tog"><input type="checkbox" id="auto" checked><span>Repetir</span></label>
+                    <span class="sp"></span>
+                    <button id="pause" class="btn"><span id="pl">Pausar</span><kbd>␣</kbd></button>
+                </div>
+            </section>
+
+            <aside class="card t-ctl">
+                <h2>Controlador \(C(s)=K_p+K_d\,s\)</h2>
+                <div class="chips">
+                    <button class="chip" data-pre="p">P (K<sub>d</sub> = 0)</button>
+                    <button class="chip" data-pre="pd">PD del ejemplo</button>
+                    <button class="chip" data-pre="kd">K<sub>d</sub> excesivo</button>
+                    <button class="chip" data-pre="kp">K<sub>p</sub> alto</button>
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(K_p\)</span><small>ganancia proporcional</small><output
+                            id="kpO"></output></div><input type="range" id="kp" min="0.2" max="5" step="0.05" value="1">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(K_d\)</span><small>ganancia derivativa</small><output
+                            id="kdO"></output></div><input type="range" id="kd" min="0" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(r\)</span><small>escalón de referencia</small><output
+                            id="RO"></output></div><input type="range" id="R" min="0.2" max="2" step="0.1" value="1">
+                </div>
+                <h2 class="sub">Material real del montaje</h2>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(N\)</span><small>filtro derivativo</small><output
+                            id="NO"></output></div><input type="range" id="N" min="5" max="300" step="1" value="40">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(q\)</span><small>cuantización del encoder</small><output
+                            id="qO"></output></div><input type="range" id="q" min="0" max="0.05" step="0.001"
+                        value="0.004">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(U\)</span><small>límite del driver (24 V)</small><output
+                            id="UO"></output></div><input type="range" id="U" min="2" max="30" step="1" value="24">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(d\)</span><small>par de carga en t = 3 s</small><output
+                            id="dO"></output></div><input type="range" id="d" min="0" max="1" step="0.05" value="0">
+                </div>
+                <label class="tog"><input type="checkbox" id="meas"><span>Derivada sobre la medición (sin
+                        golpe)</span></label>
+                <p class="spec">Servomotor brushless DM-J4340-2EC con reducción, 24 V DC, con encoder para medir θ. La
+                    derivada se estima de la velocidad medida y se filtra para atenuar la cuantización.</p>
+            </aside>
+
+            <section class="card t-proc">
+                <h2>Proceso de diseño</h2>
+                <div class="tabs">
+                    <button class="tab on" data-step="0">① Planta</button>
+                    <button class="tab" data-step="1">② Control P</button>
+                    <button class="tab" data-step="2">③ Añadir D</button>
+                    <button class="tab" data-step="3">④ Verificar montaje</button>
+                </div>
+                <div id="procBody"></div>
+            </section>
+
+            <section class="card t-fig">
+                <h2>Figura 3 · Respuesta al escalón del lazo cerrado, P vs PD</h2>
+                <canvas id="fig" height="210"></canvas>
+                <canvas id="fu" height="100" style="margin-top:6px"></canvas>
+                <div class="lg"><span><i style="background:var(--bad)"></i>Control P (K<sub>d</sub> = 0)</span><span><i
+                            style="background:var(--ac)"></i>Control PD ideal</span><span><i
+                            style="background:var(--ok)"></i>PD en el montaje real</span><span>banda ±2
+                        %</span><span>abajo: tensión u del driver</span></div>
+            </section>
+
+            <section class="card t-tab">
+                <h2>Tabla 1 · Comparación P vs PD (se recalcula en vivo)</h2>
+                <div id="tabla"></div>
+            </section>
+
+            <section class="card t-read">
+                <h2>Lectura del resultado</h2>
+                <div class="read">
+                    <div><canvas id="sp" height="190"></canvas>
+                        <div class="lg"><span><i style="background:var(--bad)"></i>polos P</span><span><i
+                                    style="background:var(--ac)"></i>polos PD · ○ cero</span></div>
+                    </div>
+                    <div id="lectura"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            var $ = function (i) { return document.getElementById(i) };
+            var P = { kp: 1, kd: 0.3, R: 1, N: 40, q: 0.004, U: 24, d: 0, meas: false }, T = 6, DTS = 0.002, STEP = 0, pend = true, lastR = 0, last = 0;
+            var X = {}, play = { t: 0, run: true, hold: 0 };
+            function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim() }
+            function tx(el) { if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]).catch(function () { }) } }
+            function fmt(v, d) { var t = v.toFixed(d === undefined ? 2 : d); return t.indexOf('.') >= 0 ? t.replace(/\.?0+$/, '') : t }
+
+            /* ---------- simulación ---------- */
+            function simTF(kp, kd, R, d, TT) {
+                var h = 0.0005, n = Math.round(TT / h), a0 = 10 * kp, a1 = 2 + 10 * kd, b0 = 10 * kp, b1 = 10 * kd, x1 = 0, x2 = 0, z1 = 0, z2 = 0, y = new Float32Array(Math.floor(n / 4) + 1);
+                for (var k = 0; k <= n; k++) {
+                    if (k % 4 === 0) y[k / 4] = b0 * x1 + b1 * x2 + z1;
+                    var dd = k * h >= 3 ? d : 0, dx2 = -a0 * x1 - a1 * x2 + R, dz2 = -a0 * z1 - a1 * z2 + 10 * dd;
+                    x1 += h * x2; x2 += h * dx2; z1 += h * z2; z2 += h * dz2;
+                }
+                return y;
+            }
+            function simReal(c, TT, d) {
+                var h = 0.0005, n = Math.round(TT / h), th = 0, w = 0, xf = 0, m = Math.floor(n / 4) + 1, y = new Float32Array(m), u = new Float32Array(m);
+                for (var k = 0; k <= n; k++) {
+                    var tm = c.q > 0 ? Math.round(th / c.q) * c.q : th, e = c.R - tm, v = c.meas ? -tm : e, dv = c.N * (v - xf), uc = c.kp * e + c.kd * dv, us = Math.max(-c.U, Math.min(c.U, uc));
+                    if (k % 4 === 0) { y[k / 4] = th; u[k / 4] = us }
+                    xf += h * dv; w += h * (-2 * w + 10 * (us + (k * h >= 3 ? d : 0))); th += h * w;
+                }
+                return { y: y, u: u };
+            }
+            function metrics(y, R) {
+                var n = y.length, pk = 0, i, ts;
+                for (i = 0; i < n; i++)if (y[i] > pk) pk = y[i];
+                for (i = n - 1; i >= 0; i--)if (Math.abs(y[i] - R) > 0.02 * R) break;
+                ts = (i + 1) * DTS; if (i >= n - 1) ts = null;
+                return { mp: Math.max(0, (pk - R) / R * 100), ts: ts };
+            }
+            function recompute() {
+                var c = { kp: P.kp, kd: P.kd, R: P.R, N: P.N, q: P.q, U: P.U, meas: P.meas };
+                X.P = simTF(P.kp, 0, P.R, P.d, T); X.D = simTF(P.kp, P.kd, P.R, P.d, T); X.real = simReal(c, T, P.d);
+                X.mP = metrics(simTF(P.kp, 0, 1, 0, 12), 1); X.mD = metrics(simTF(P.kp, P.kd, 1, 0, 12), 1);
+                var rr = simReal(c, 12, 0); X.mR = metrics(rr.y, P.R);
+                var pk = 0; for (var i = 0; i < rr.u.length; i++)pk = Math.max(pk, Math.abs(rr.u[i]));
+                X.upk = pk; X.sat = pk >= P.U - 0.01;
+                var wn = Math.sqrt(10 * P.kp), z = (2 + 10 * P.kd) / (2 * wn), p = $('pill'), s, cl;
+                if (z < 0.5) { s = 'Subamortiguado · ζ = ' + fmt(z); cl = 'wr' } else if (z <= 1) { s = 'Amortiguamiento adecuado · ζ = ' + fmt(z); cl = 'ok' } else { s = 'Sobreamortiguado · ζ = ' + fmt(z); cl = 'wr' }
+                if (X.sat) { s += ' · driver saturado'; cl = 'bad' }
+                p.textContent = s; p.className = 'pill ' + cl; pend = true;
+            }
+
+            /* ---------- controles ---------- */
+            function setP(id, v) { P[id] = v; $(id).value = v; showO(id) }
+            var UN = { kp: ['', 2], kd: ['', 2], R: ['', 1], N: [' rad/s', 0], q: ['', 3], U: [' V', 0], d: ['', 2] };
+            function showO(id) { $(id + 'O').textContent = P[id].toFixed(UN[id][1]) + UN[id][0] }
+            Object.keys(UN).forEach(function (id) {
+                var el = $(id); showO(id);
+                el.addEventListener('input', function () { P[id] = +el.value; showO(id); recompute() });
+                el.addEventListener('change', restart);
+            });
+            $('meas').onchange = function () { P.meas = $('meas').checked; recompute(); restart() };
+            function apply(o) { Object.keys(o).forEach(function (k) { if (k === 'meas') { P.meas = o[k]; $('meas').checked = o[k] } else setP(k, o[k]) }); recompute(); restart() }
+            var PRE = { p: { kp: 1, kd: 0 }, pd: { kp: 1, kd: 0.3 }, kd: { kp: 1, kd: 1 }, kp: { kp: 4, kd: 0.3 } };
+            document.querySelectorAll('[data-pre]').forEach(function (b) { b.onclick = function () { apply(PRE[b.dataset.pre]) } });
+            var SP = [null, { kp: 1, kd: 0 }, { kp: 1, kd: 0.3 }, { N: 40, q: 0.004, U: 24, d: 0, meas: false }];
+            document.querySelectorAll('[data-step]').forEach(function (b) {
+                b.onclick = function () {
+                    STEP = +b.dataset.step; document.querySelectorAll('[data-step]').forEach(function (o) { o.classList.toggle('on', o === b) });
+                    if (SP[STEP]) apply(SP[STEP]); pend = true
+                }
+            });
+            function restart() { play.t = 0; play.hold = 0; play.run = true; $('pl').textContent = 'Pausar' }
+            $('go').onclick = restart;
+            $('pause').onclick = function () { play.run = !play.run; $('pl').textContent = play.run ? 'Pausar' : 'Reanudar' };
+            $('theme').onclick = function () { var r = document.documentElement, c = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'); r.setAttribute('data-theme', c === 'dark' ? 'light' : 'dark') };
+            document.addEventListener('keydown', function (e) {
+                var t = e.target.tagName; if (t === 'INPUT' && e.target.type !== 'checkbox') return;
+                if (e.key.toLowerCase() === 'e') restart(); else if (e.code === 'Space') { e.preventDefault(); if (t === 'BUTTON') e.target.blur(); $('pause').click() }
+            });
+
+            /* ---------- textos con ecuaciones ---------- */
+            function roots(a1, a0) { var d = a1 * a1 - 4 * a0; return d >= 0 ? [[(-a1 + Math.sqrt(d)) / 2, 0], [(-a1 - Math.sqrt(d)) / 2, 0]] : [[-a1 / 2, Math.sqrt(-d) / 2], [-a1 / 2, -Math.sqrt(-d) / 2]] }
+            function mpf(z) { return z < 1 ? Math.exp(-Math.PI * z / Math.sqrt(1 - z * z)) * 100 : 0 }
+            function vals() { var wn = Math.sqrt(10 * P.kp), zP = 1 / wn, zD = (2 + 10 * P.kd) / (2 * wn); return { wn: wn, zP: zP, zD: zD, mfP: mpf(zP), mfD: mpf(zD), tfP: 4 / (zP * wn), tfD: 4 / (zD * wn) } }
+            function tsS(m) { return m.ts === null ? '> 12 s' : '≈ ' + fmt(m.ts, 1) + ' s' }
+            function renderTab() {
+                var v = vals(), eqP = '\\(s^2+2s+' + fmt(10 * P.kp) + '=0\\)', eqD = '\\(s^2+' + fmt(2 + 10 * P.kd) + 's+' + fmt(10 * P.kp) + '=0\\)';
+                $('tabla').innerHTML = '<table class="tb"><tr><th>Parámetro</th><th>P (K<sub>d</sub> = 0)</th><th class="pd">PD</th><th class="pd">PD en montaje real</th></tr>'
+                    + '<tr><td>Ecuación característica</td><td>' + eqP + '</td><td class="pd">' + eqD + '</td><td class="pd">igual que PD</td></tr>'
+                    + '<tr><td>Frecuencia natural ω<sub>n</sub></td><td>' + fmt(v.wn) + ' rad/s</td><td class="pd">' + fmt(v.wn) + ' rad/s</td><td class="pd">—</td></tr>'
+                    + '<tr><td>Amortiguamiento ζ</td><td>' + fmt(v.zP) + '</td><td class="pd">' + fmt(v.zD) + '</td><td class="pd">—</td></tr>'
+                    + '<tr><td>Sobreimpulso (fórmula, sin cero)</td><td>' + fmt(v.mfP, 1) + ' %</td><td class="pd">' + fmt(v.mfD, 1) + ' %</td><td class="pd">—</td></tr>'
+                    + '<tr><td>Sobreimpulso (simulación)</td><td>' + fmt(X.mP.mp, 1) + ' %</td><td class="pd">' + fmt(X.mD.mp, 1) + ' %</td><td class="pd">' + fmt(X.mR.mp, 1) + ' %</td></tr>'
+                    + '<tr><td>Tiempo de establecimiento (2 %)</td><td>' + tsS(X.mP) + '</td><td class="pd">' + tsS(X.mD) + '</td><td class="pd">' + tsS(X.mR) + '</td></tr>'
+                    + '<tr><td>Cero del controlador</td><td>—</td><td class="pd">' + (P.kd > 0 ? '\\(s=-' + fmt(P.kp / P.kd) + '\\)' : '—') + '</td><td class="pd">' + (P.kd > 0 ? '\\(s=-' + fmt(P.kp / P.kd) + '\\)' : '—') + '</td></tr>'
+                    + '<tr><td>Pico de tensión |u|</td><td>' + fmt(P.kp * P.R, 1) + ' V</td><td class="pd">∞ (sin filtro)</td><td class="pd ' + (X.sat ? 'bad' : '') + '">' + fmt(X.upk, 1) + ' V' + (X.sat ? ' ⚠' : '') + '</td></tr></table>';
+            }
+            function renderRead() {
+                var v = vals(), h;
+                if (P.kd <= 0) { h = '<p class="kn">Con \\(K_d=0\\) solo hay acción proporcional: ζ = ' + fmt(v.zP) + ', el sistema queda <b>subamortiguado</b> con sobreimpulso ≈ ' + fmt(X.mP.mp, 0) + ' % y ts ' + tsS(X.mP) + '. Sube \\(K_d\\) para ver cómo se amortigua.</p>' }
+                else {
+                    h = '<p>Al añadir \\(C(s)=K_p+K_d\\,s\\) la frecuencia natural se conserva (ω<sub>n</sub> = ' + fmt(v.wn) + ' rad/s) y el amortiguamiento sube de <b>' + fmt(v.zP) + '</b> a <b>' + fmt(v.zD) + '</b>: el sobreimpulso cae de ≈ ' + fmt(X.mP.mp, 0) + ' % a ≈ ' + fmt(X.mD.mp, 0) + ' % y el tiempo de establecimiento de ' + tsS(X.mP) + ' a ' + tsS(X.mD) + '.</p>'
+                        + '<p>El cero del PD en \\(s=-' + fmt(P.kp / P.kd) + '\\) explica que el sobreimpulso real (≈ ' + fmt(X.mD.mp, 1) + ' %) supere al que predice la fórmula sin cero (≈ ' + fmt(v.mfD, 1) + ' %): el diseño se confirma por simulación.</p>';
+                }
+                if (P.d > 0) h += '<p>Con par de carga \\(d=' + fmt(P.d) + '\\) el error permanente es \\(d/K_p=' + fmt(P.d / P.kp) + '\\) con P y con PD: la acción D no lo elimina (haría falta integral).</p>';
+                h += '<p class="kn">Mismo \\(K_p\\): la acción derivativa no acelera el estado estable, sino que amortigua el transitorio.</p>';
+                $('lectura').innerHTML = h;
+            }
+            function renderProc() {
+                var v = vals(), h;
+                if (STEP === 0) h = '<p class="pt">La articulación se aproxima por un integrador con un polo mecánico en −2:</p>\\[G(s)=\\frac{\\Theta(s)}{V(s)}=\\frac{10}{s(s+2)}\\]<p class="pt">La ecuación característica del lazo cerrado sale de</p>\\[1+C(s)\\,G(s)=0\\]';
+                else if (STEP === 1) h = '<p class="pt"><b>Control proporcional</b> \\(C(s)=K_p=' + fmt(P.kp) + '\\)</p>\\[s^2+2s+' + fmt(10 * P.kp) + '=0\\]\\[\\omega_n=' + fmt(v.wn) + '\\ \\text{rad/s},\\qquad \\zeta=\\frac{2}{2\\omega_n}=' + fmt(v.zP) + '\\]<p class="pt">' + (v.zP < 1 ? '<b>Subamortiguado</b>: oscilaciones pronunciadas, sobreimpulso ≈ ' + fmt(X.mP.mp, 0) + ' %.' : 'Sobreamortiguado.') + '</p>';
+                else if (STEP === 2) h = '<p class="pt"><b>Se añade la acción derivativa</b></p>\\[s^2+(2+10K_d)\\,s+10K_p=0\\]\\[\\omega_n=' + fmt(v.wn) + '\\ (\\text{igual}),\\quad \\zeta=\\frac{2+10K_d}{2\\omega_n}=' + fmt(v.zD) + '\\]<p class="pt">\\(K_d\\) solo mueve el término en \\(s\\): amortigua sin cambiar \\(\\omega_n\\). Cero del PD: ' + (P.kd > 0 ? '\\(s=-' + fmt(P.kp / P.kd) + '\\)' : 'no hay (K<sub>d</sub> = 0)') + '.</p>';
+                else h = '<p class="pt"><b>Implementación real:</b> filtro derivativo, encoder cuantizado y driver con límite.</p>\\[C_f(s)=K_p+\\frac{K_d\\,s}{1+s/N},\\quad N=' + P.N + '\\ \\text{rad/s}\\]<p class="pt">Pico de tensión <b>' + fmt(X.upk, 1) + ' V</b> frente al límite de ±' + P.U + ' V: ' + (X.sat ? '<span class="bad">satura el driver ✗</span>' : '<span class="ok">no satura ✓</span>') + '.</p>'
+                    + '<p class="pt">El pico inicial vale ≈ \\(K_p r+K_d N r=' + fmt(P.kp * P.R + P.kd * P.N * P.R, 1) + '\\) V (golpe derivativo). ' + (X.sat ? 'Baja \\(N\\), o activa «Derivada sobre la medición».' : 'Sube \\(N\\) o \\(r\\) para ver cuándo satura.') + '</p>';
+                $('procBody').innerHTML = h;
+            }
+            function renderAll() { renderTab(); renderRead(); renderProc(); tx($('tabla')); tx($('lectura')); tx($('procBody')) }
+
+            /* ---------- dibujo ---------- */
+            function setup(c) {
+                var fl = c.hasAttribute('data-fill'), r = window.devicePixelRatio || 1, w = c.clientWidth, h = fl ? c.clientHeight : +(c.dataset.h || c.getAttribute('height'));
+                if (!fl) { c.dataset.h = h; c.style.height = h + 'px' }
+                if (c.width !== Math.round(w * r) || c.height !== Math.round(h * r)) { c.width = Math.round(w * r); c.height = Math.round(h * r) }
+                var x = c.getContext('2d'); x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, w, h); return { x: x, w: w, h: h };
+            }
+            function rrect(x, px, py, w, h, r) {
+                x.beginPath(); x.moveTo(px + r, py); x.lineTo(px + w - r, py); x.quadraticCurveTo(px + w, py, px + w, py + r);
+                x.lineTo(px + w, py + h - r); x.quadraticCurveTo(px + w, py + h, px + w - r, py + h); x.lineTo(px + r, py + h);
+                x.quadraticCurveTo(px, py + h, px, py + h - r); x.lineTo(px, py + r); x.quadraticCurveTo(px, py, px + r, py); x.closePath();
+            }
+            function idx() { return Math.min(X.real.y.length - 1, Math.floor(play.t / DTS)) }
+
+            function drawArm() {
+                var c = setup($('arm')), x = c.x, W = c.w, H = c.h, i = idx(), th = X.real.y[i], u = X.real.u[i];
+                var dark = (document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light')) === 'dark';
+                var px = W * 0.43, py = H * 0.54, L = Math.min(W * 0.44, H * 0.36), A = 70 * Math.PI / 180, al = th * A, ar = P.R * A, gy = py + 92;
+
+                // 1. Retícula técnica de laboratorio en el fondo
+                var step = 36;
+                x.strokeStyle = dark ? 'rgba(148,163,184,0.06)' : 'rgba(15,23,42,0.05)';
+                x.lineWidth = 1;
+                for (var gx = px % step; gx < W; gx += step) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, gy); x.stroke() }
+                for (var gy2 = py % step; gy2 < gy; gy2 += step) { x.beginPath(); x.moveTo(0, gy2); x.lineTo(W, gy2); x.stroke() }
+
+                // 2. Superficie del banco de pruebas
+                var benchGrad = x.createLinearGradient(0, gy, 0, H);
+                benchGrad.addColorStop(0, dark ? '#18243d' : '#dce4f0');
+                benchGrad.addColorStop(1, dark ? '#0f172a' : '#cbd5e1');
+                x.fillStyle = benchGrad; x.fillRect(0, gy, W, H - gy);
+                x.strokeStyle = dark ? '#334155' : '#94a3b8'; x.lineWidth = 2;
+                x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke();
+
+                // Sombra de contacto del conjunto sobre el banco
+                var shGrad = x.createRadialGradient(px - 28, gy, 8, px - 28, gy, 125);
+                shGrad.addColorStop(0, 'rgba(0,0,0,0.32)');
+                shGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                x.fillStyle = shGrad; x.fillRect(px - 155, gy - 4, 250, 12);
+
+                // Degradados metálicos industriales
+                var alumGrad = x.createLinearGradient(px - 110, py - 60, px + 40, py + 90);
+                alumGrad.addColorStop(0, dark ? '#64748b' : '#e2e8f0');
+                alumGrad.addColorStop(0.5, dark ? '#475569' : '#cbd5e1');
+                alumGrad.addColorStop(1, dark ? '#334155' : '#94a3b8');
+
+                var motorBodyGrad = x.createLinearGradient(0, py - 46, 0, py + 46);
+                motorBodyGrad.addColorStop(0, '#1e293b');
+                motorBodyGrad.addColorStop(0.3, '#475569');
+                motorBodyGrad.addColorStop(0.75, '#1e293b');
+                motorBodyGrad.addColorStop(1, '#0f172a');
+
+                // 3. Cables de alimentación y señal del servomotor (curva realista hacia el banco)
+                x.save();
+                x.lineCap = 'round';
+                // Cable rojo (+24V)
+                x.strokeStyle = '#dc2626'; x.lineWidth = 3.2;
+                x.beginPath(); x.moveTo(px - 112, py + 18); x.bezierCurveTo(px - 138, py + 26, px - 142, gy - 18, px - 122, gy - 6); x.stroke();
+                // Cable negro (GND)
+                x.strokeStyle = '#0f172a'; x.lineWidth = 3.2;
+                x.beginPath(); x.moveTo(px - 112, py + 23); x.bezierCurveTo(px - 134, py + 32, px - 136, gy - 14, px - 116, gy - 6); x.stroke();
+                // Bus de datos del encoder (amarillo/azul)
+                x.strokeStyle = '#d97706'; x.lineWidth = 2;
+                x.beginPath(); x.moveTo(px - 112, py + 28); x.bezierCurveTo(px - 128, py + 37, px - 130, gy - 10, px - 110, gy - 6); x.stroke();
+                // Pasacables en el banco
+                x.fillStyle = '#1e293b'; rrect(x, px - 126, gy - 9, 22, 9, 2); x.fill();
+                x.restore();
+
+                // 4. Pedestal de aluminio mecanizado y placa base con pernos
+                // Placa base inferior
+                x.fillStyle = alumGrad;
+                rrect(x, px - 116, gy - 14, 172, 14, 3); x.fill();
+                x.strokeStyle = dark ? '#475569' : '#64748b'; x.lineWidth = 1.2; x.stroke();
+                // Pernos de anclaje en la base
+                [-104, 44].forEach(function (bx) {
+                    x.fillStyle = '#334155'; x.fillRect(px + bx - 5, gy - 19, 10, 5);
+                    x.fillStyle = '#94a3b8'; x.fillRect(px + bx - 3.5, gy - 17.5, 7, 2);
+                });
+
+                // Columna de soporte con refuerzo triangular
+                x.fillStyle = alumGrad;
+                x.beginPath();
+                x.moveTo(px - 42, gy - 14); x.lineTo(px - 28, py + 28); x.lineTo(px + 24, py + 28); x.lineTo(px + 34, gy - 14);
+                x.closePath(); x.fill(); x.stroke();
+                // Ranura de aligeramiento en la columna
+                x.fillStyle = dark ? '#1e293b' : '#94a3b8';
+                rrect(x, px - 12, py + 42, 16, 32, 4); x.fill();
+
+                // 5. Cuerpo del Servomotor Brushless DM-J4340-2EC (vista lateral derecha-eje)
+                // Módulo trasero del encoder óptico
+                x.fillStyle = '#0f172a';
+                rrect(x, px - 114, py - 32, 20, 64, 4); x.fill();
+                x.strokeStyle = '#334155'; x.lineWidth = 1.2; x.stroke();
+                // LED de estado del encoder
+                var encOk = !X.sat;
+                x.fillStyle = encOk ? css('--ok') : css('--bad');
+                x.beginPath(); x.arc(px - 104, py - 18, 3, 0, Math.PI * 2); x.fill();
+                x.save(); x.shadowColor = x.fillStyle; x.shadowBlur = 6; x.fill(); x.restore();
+
+                // Carcasa cilíndrica principal del motor
+                x.fillStyle = motorBodyGrad;
+                rrect(x, px - 96, py - 42, 74, 84, 5); x.fill();
+                x.strokeStyle = '#475569'; x.lineWidth = 1.4; x.stroke();
+
+                // Aletas de refrigeración mecanizadas en el estator
+                x.strokeStyle = 'rgba(255,255,255,0.14)'; x.lineWidth = 1.2;
+                for (var fy = -34; fy <= 34; fy += 8) {
+                    x.beginPath(); x.moveTo(px - 92, py + fy); x.lineTo(px - 64, py + fy); x.stroke();
+                }
+
+                // Placa de identificación técnica del motor
+                x.fillStyle = '#090d16';
+                rrect(x, px - 61, py - 30, 34, 60, 3); x.fill();
+                x.strokeStyle = '#334155'; x.lineWidth = 1; x.stroke();
+                x.save();
+                x.translate(px - 44, py); x.rotate(-Math.PI / 2);
+                x.fillStyle = '#e2e8f0'; x.font = '700 7.5px "JetBrains Mono",monospace'; x.textAlign = 'center';
+                x.fillText('DM-J4340-2EC', 0, -4);
+                x.fillStyle = '#60a5fa'; x.font = '600 6.8px "JetBrains Mono",monospace';
+                x.fillText('24V DC · ENC', 0, 6);
+                x.restore();
+
+                // 6. Transportador angular / escala de referencia en el plano de giro
+                var gR = L * 0.86;
+                x.save();
+                x.strokeStyle = dark ? 'rgba(148,163,184,0.22)' : 'rgba(71,85,105,0.22)';
+                x.lineWidth = 1;
+                x.beginPath(); x.arc(px, py, gR, -A * 2.1, 0.25); x.stroke();
+                // Línea base 0° horizontal
+                x.setLineDash([4, 4]);
+                x.beginPath(); x.moveTo(px, py); x.lineTo(px + gR + 16, py); x.stroke();
+                x.setLineDash([]);
+                // Marcas de grados en el arco
+                x.fillStyle = css('--mu'); x.font = '600 9px "JetBrains Mono",monospace';
+                [0, 0.5, 1, 1.5, 2].forEach(function (rad) {
+                    var ang = -rad * A;
+                    var x1 = px + (gR - 5) * Math.cos(ang), y1 = py + (gR - 5) * Math.sin(ang);
+                    var x2 = px + (gR + 4) * Math.cos(ang), y2 = py + (gR + 4) * Math.sin(ang);
+                    x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke();
+                    x.fillText(rad.toFixed(1) + ' rad', px + (gR + 8) * Math.cos(ang), py + (gR + 8) * Math.sin(ang) + 3);
+                });
+                x.restore();
+
+                // 7. Brida del reductor planetario y anillo encoder graduado
+                // Carcasa externa de la brida
+                x.fillStyle = alumGrad;
+                x.beginPath(); x.arc(px, py, 38, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = dark ? '#64748b' : '#475569'; x.lineWidth = 1.8; x.stroke();
+
+                // Disco óptico graduado que gira con el eje
+                x.save(); x.translate(px, py); x.rotate(-al);
+                x.fillStyle = '#0f172a'; x.beginPath(); x.arc(0, 0, 31, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = '#94a3b8'; x.lineWidth = 1.2;
+                for (var k = 0; k < 36; k++) {
+                    var ka = k * Math.PI / 18, major = (k % 3 === 0);
+                    x.beginPath();
+                    x.moveTo((major ? 24 : 27) * Math.cos(ka), (major ? 24 : 27) * Math.sin(ka));
+                    x.lineTo(30.5 * Math.cos(ka), 30.5 * Math.sin(ka));
+                    x.stroke();
+                }
+                x.restore();
+
+                // 8. Sector angular barrido y objetivo de referencia (r)
+                x.fillStyle = css('--ac'); x.globalAlpha = 0.14;
+                x.beginPath(); x.moveTo(px, py); x.arc(px, py, 64, 0, -al, al > 0); x.closePath(); x.fill();
+                x.globalAlpha = 1;
+
+                // Posición objetivo (referencia r) en línea técnica discontinua
+                x.save();
+                x.setLineDash([5, 5]); x.strokeStyle = css('--mu'); x.lineWidth = 2;
+                var rx = px + L * Math.cos(ar), ry = py - L * Math.sin(ar);
+                x.beginPath(); x.moveTo(px, py); x.lineTo(rx, ry); x.stroke();
+                x.setLineDash([]);
+                x.beginPath(); x.arc(rx, ry, 13, 0, Math.PI * 2); x.stroke();
+                x.fillStyle = css('--mu'); x.font = '700 10px "JetBrains Mono",monospace';
+                x.fillText('r', rx + 16, ry + 4);
+                x.restore();
+
+                // 9. Eslabón robótico mecanizado (brazo principal)
+                x.save(); x.translate(px, py); x.rotate(-al);
+
+                // Cuerpo del eslabón CNC con degradado metálico
+                var armGrad = x.createLinearGradient(0, -13, 0, 13);
+                armGrad.addColorStop(0, dark ? '#3b82f6' : '#2563eb');
+                armGrad.addColorStop(0.5, dark ? '#60a5fa' : '#3b82f6');
+                armGrad.addColorStop(1, dark ? '#1d4ed8' : '#1e40af');
+
+                x.fillStyle = armGrad;
+                x.beginPath();
+                x.arc(0, 0, 16, Math.PI / 2, Math.PI * 1.5);
+                x.lineTo(L, -10);
+                x.arc(L, 0, 11, -Math.PI / 2, Math.PI / 2);
+                x.lineTo(0, 16);
+                x.closePath(); x.fill();
+                x.strokeStyle = dark ? '#93c5fd' : '#1e3a8a'; x.lineWidth = 1.5; x.stroke();
+
+                // Ranura de aligeramiento estructural en el brazo
+                x.fillStyle = dark ? '#0f172a' : '#dbeafe';
+                rrect(x, 24, -4.5, L - 44, 9, 4); x.fill();
+
+                // Buje central de acople con 6 tornillos Allen
+                x.fillStyle = alumGrad; x.beginPath(); x.arc(0, 0, 15, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = '#1e293b'; x.lineWidth = 1.5; x.stroke();
+                x.fillStyle = '#0f172a';
+                for (var b = 0; b < 6; b++) {
+                    var ba = b * Math.PI / 3;
+                    x.beginPath(); x.arc(10 * Math.cos(ba), 10 * Math.sin(ba), 1.6, 0, Math.PI * 2); x.fill();
+                }
+                // Eje central
+                x.fillStyle = '#334155'; x.beginPath(); x.arc(0, 0, 5, 0, Math.PI * 2); x.fill();
+
+                // Articulación / masa puntual en el extremo del eslabón
+                x.fillStyle = alumGrad; x.beginPath(); x.arc(L, 0, 11, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = '#1e293b'; x.lineWidth = 1.5; x.stroke();
+                x.fillStyle = css('--ac'); x.beginPath(); x.arc(L, 0, 4.5, 0, Math.PI * 2); x.fill();
+                x.restore();
+
+                // 10. Indicador de tensión del driver en la base del escenario
+                var bw = Math.min(W * 0.74, 430), x0 = (W - bw) / 2, by = H - 26, sat = Math.abs(u) >= P.U - 0.01, fl = Math.max(-1, Math.min(1, u / P.U)) * bw / 2;
+                x.fillStyle = css('--mu'); x.font = '600 11px "JetBrains Mono",monospace';
+                x.fillText('Driver u = ' + u.toFixed(1) + ' V  (±' + P.U + ' V)' + (sat ? '  ⚠ SATURACIÓN' : ''), x0, by - 7);
+                rrect(x, x0, by, bw, 9, 4); x.fillStyle = dark ? '#1e293b' : '#cbd5e1'; x.fill();
+                if (Math.abs(fl) > 0.5) {
+                    x.fillStyle = sat ? css('--bad') : css('--ok');
+                    x.fillRect(fl > 0 ? x0 + bw / 2 : x0 + bw / 2 + fl, by, Math.abs(fl), 9);
+                }
+                x.strokeStyle = css('--tx'); x.lineWidth = 2;
+                x.beginPath(); x.moveTo(x0 + bw / 2, by - 3); x.lineTo(x0 + bw / 2, by + 12); x.stroke();
+            }
+
+            function drawFig() {
+                var c = setup($('fig')), x = c.x, W = c.w, H = c.h, pl = 42, pr = 14, pt = 10, pb = 22, iw = W - pl - pr, ih = H - pt - pb, R = P.R, ym = R * 1.1, i, n = X.P.length;
+                [X.P, X.D, X.real.y].forEach(function (a) { for (i = 0; i < n; i += 5)ym = Math.max(ym, a[i] * 1.06) });
+                function XX(t) { return pl + t / T * iw } function YY(v) { return pt + ih - v / ym * ih }
+                x.globalAlpha = 0.14; x.fillStyle = css('--ok'); x.fillRect(pl, YY(R * 1.02), iw, YY(R * 0.98) - YY(R * 1.02)); x.globalAlpha = 1;
+                x.lineWidth = 1; x.strokeStyle = css('--bd'); x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif';
+                for (var g = 0; g <= T; g++) { x.beginPath(); x.moveTo(XX(g), pt); x.lineTo(XX(g), pt + ih); x.stroke(); x.fillText(g + '', XX(g) - 3, H - 6) }
+                x.fillText('t (s)', pl + iw - 26, H - 6); x.fillText('θ', 10, pt + 10); x.fillText(fmt(ym * 0.95, 1), 8, pt + 22); x.fillText('0', pl - 12, pt + ih + 3);
+                x.setLineDash([5, 4]); x.strokeStyle = css('--mu'); x.beginPath(); x.moveTo(pl, YY(R)); x.lineTo(pl + iw, YY(R)); x.stroke(); x.setLineDash([]); x.fillText('r = ' + fmt(R, 1), pl + 4, YY(R) - 4);
+                if (P.d > 0) { x.setLineDash([2, 3]); x.beginPath(); x.moveTo(XX(3), pt); x.lineTo(XX(3), pt + ih); x.stroke(); x.setLineDash([]); x.fillText('par de carga', XX(3) + 4, pt + 12) }
+                function ln(a, col, w, upto) { x.strokeStyle = col; x.lineWidth = w; x.lineJoin = 'round'; x.beginPath(); for (var k = 0; k <= upto; k += 2) { var px = XX(k * DTS), py = YY(a[k]); if (k) x.lineTo(px, py); else x.moveTo(px, py) } x.stroke() }
+                ln(X.P, css('--bad'), 2.2, n - 1); ln(X.D, css('--ac'), 2.2, n - 1);
+                x.globalAlpha = 0.35; ln(X.real.y, css('--ok'), 2, n - 1); x.globalAlpha = 1; ln(X.real.y, css('--ok'), 2.8, idx());
+                function pk(a, col, lab) { var m = 0, mi = 0; for (var k = 0; k < n; k++)if (a[k] > m) { m = a[k]; mi = k } if (m > R * 1.005 && mi > 0) { x.fillStyle = col; x.beginPath(); x.arc(XX(mi * DTS), YY(m), 4, 0, 7); x.fill(); x.font = '600 11px Inter,system-ui,sans-serif'; x.fillText(lab + ' ' + fmt((m - R) / R * 100, 0) + ' %', XX(mi * DTS) + 7, YY(m) - 3) } }
+                pk(X.P, css('--bad'), 'Mp'); if (P.kd > 0) pk(X.D, css('--ac'), 'Mp');
+                if (X.mD.ts !== null && P.kd > 0) { x.setLineDash([2, 3]); x.strokeStyle = css('--ac'); x.beginPath(); x.moveTo(XX(X.mD.ts), YY(R)); x.lineTo(XX(X.mD.ts), pt + ih); x.stroke(); x.setLineDash([]); x.fillStyle = css('--ac'); x.fillText('ts ≈ ' + fmt(X.mD.ts, 1) + ' s', XX(X.mD.ts) + 4, pt + ih - 6) }
+                var cx = XX(Math.min(play.t, T)); x.strokeStyle = css('--tx'); x.globalAlpha = 0.4; x.beginPath(); x.moveTo(cx, pt); x.lineTo(cx, pt + ih); x.stroke(); x.globalAlpha = 1;
+                x.fillStyle = css('--ok'); x.beginPath(); x.arc(cx, YY(X.real.y[idx()]), 5, 0, 7); x.fill();
+            }
+            function drawU() {
+                var c = setup($('fu')), x = c.x, W = c.w, H = c.h, pl = 42, pr = 14, pt = 6, pb = 6, iw = W - pl - pr, ih = H - pt - pb, U = P.U, ym = Math.max(U * 1.15, X.upk * 1.05), a = X.real.u;
+                function XX(t) { return pl + t / T * iw } function YY(v) { return pt + ih / 2 - v / ym * ih / 2 }
+                x.lineWidth = 1; x.strokeStyle = css('--bd'); x.beginPath(); x.moveTo(pl, YY(0)); x.lineTo(pl + iw, YY(0)); x.stroke();
+                x.setLineDash([4, 4]); x.strokeStyle = css('--bad'); x.beginPath(); x.moveTo(pl, YY(U)); x.lineTo(pl + iw, YY(U)); x.moveTo(pl, YY(-U)); x.lineTo(pl + iw, YY(-U)); x.stroke(); x.setLineDash([]);
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('u (V)', 6, pt + 10); x.fillText('+' + U, pl - 30, YY(U) + 4); x.fillText('-' + U, pl - 30, YY(-U) + 4);
+                x.strokeStyle = css('--ok'); x.lineWidth = 1.8; x.beginPath(); for (var k = 0; k < a.length; k += 2) { var px = XX(k * DTS), py = YY(a[k]); if (k) x.lineTo(px, py); else x.moveTo(px, py) } x.stroke();
+                var cx = XX(Math.min(play.t, T)); x.strokeStyle = css('--tx'); x.globalAlpha = 0.4; x.beginPath(); x.moveTo(cx, pt); x.lineTo(cx, pt + ih); x.stroke(); x.globalAlpha = 1;
+            }
+            function drawS() {
+                var c = setup($('sp')), x = c.x, W = c.w, H = c.h, cx = W * 0.8, cy = H / 2, sx = (W * 0.8 - 8) / 8, sy = (H / 2 - 8) / 5;
+                x.globalAlpha = 0.09; x.fillStyle = css('--ok'); x.fillRect(0, 0, cx, H); x.fillStyle = css('--bad'); x.fillRect(cx, 0, W - cx, H); x.globalAlpha = 1;
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; for (var g = -8; g <= 1; g++) { x.beginPath(); x.moveTo(cx + g * sx, 0); x.lineTo(cx + g * sx, H); x.stroke() } for (g = -5; g <= 5; g++) { x.beginPath(); x.moveTo(0, cy + g * sy); x.lineTo(W, cy + g * sy); x.stroke() }
+                x.strokeStyle = css('--mu'); x.lineWidth = 1.5; x.beginPath(); x.moveTo(0, cy); x.lineTo(W, cy); x.moveTo(cx, 0); x.lineTo(cx, H); x.stroke();
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('Re', W - 18, cy - 5); x.fillText('Im', cx + 5, 12);
+                function cr(p, col) { x.strokeStyle = col; x.lineWidth = 3; var px = cx + Math.max(-8, Math.min(1, p[0])) * sx, py = cy - Math.max(-5, Math.min(5, p[1])) * sy; x.beginPath(); x.moveTo(px - 5, py - 5); x.lineTo(px + 5, py + 5); x.moveTo(px + 5, py - 5); x.lineTo(px - 5, py + 5); x.stroke() }
+                roots(2, 10 * P.kp).forEach(function (p) { cr(p, css('--bad')) }); roots(2 + 10 * P.kd, 10 * P.kp).forEach(function (p) { cr(p, css('--ac')) });
+                if (P.kd > 0) { var zx = -P.kp / P.kd; if (zx > -8) { x.strokeStyle = css('--ac'); x.lineWidth = 2.5; x.beginPath(); x.arc(cx + zx * sx, cy, 5, 0, 7); x.stroke() } }
+            }
+            function hud() {
+                var i = idx(), th = X.real.y[i];
+                $('hth').textContent = th.toFixed(3); $('hr').textContent = P.R.toFixed(2); $('he').textContent = (P.R - th).toFixed(3); $('hu').textContent = X.real.u[i].toFixed(1) + ' V'; $('ht').textContent = play.t.toFixed(2) + ' s';
+            }
+            function frame(ts) {
+                var dt = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
+                if (play.run) {
+                    if (play.t < T) play.t = Math.min(T, play.t + dt);
+                    else if ($('auto').checked) { play.hold += dt; if (play.hold > 1.2) restart() }
+                }
+                if (pend && ts - lastR > 140) { pend = false; lastR = ts; renderAll() }
+                hud(); drawArm(); drawFig(); drawU(); drawS();
+                requestAnimationFrame(frame);
+            }
+            recompute();
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>

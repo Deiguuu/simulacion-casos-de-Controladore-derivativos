@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Control de temperatura en un horno industrial · PID</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+    <script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, svg: { fontCache: 'none' }, options: { enableMenu: false } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+    <style>
+        :root {
+            --bg: #f3f1ec;
+            --g1: #ffe2c9;
+            --card: #fff;
+            --tx: #1b1a17;
+            --mu: #6d6a62;
+            --bd: #e6e2d8;
+            --ac: #e0661a;
+            --ok: #059669;
+            --bad: #dc2626;
+            --wr: #2563eb;
+            --rb: #3b3a36;
+            --sky1: #fff1e3;
+            --sky2: #fffaf4;
+            --gnd: #e8e2d6;
+            --sh: 0 1px 2px rgba(40, 30, 10, .06), 0 10px 30px rgba(40, 30, 10, .08);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #13100d;
+                --g1: #4a2410;
+                --card: #1d1814;
+                --tx: #f1ece4;
+                --mu: #a29a8c;
+                --bd: #3a322a;
+                --ac: #ff8a3d;
+                --ok: #34d399;
+                --bad: #f87171;
+                --wr: #60a5fa;
+                --rb: #d8d0c3;
+                --sky1: #241a12;
+                --sky2: #1a1410;
+                --gnd: #2a221b;
+                --sh: 0 10px 30px rgba(0, 0, 0, .4);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #13100d;
+            --g1: #4a2410;
+            --card: #1d1814;
+            --tx: #f1ece4;
+            --mu: #a29a8c;
+            --bd: #3a322a;
+            --ac: #ff8a3d;
+            --ok: #34d399;
+            --bad: #f87171;
+            --wr: #60a5fa;
+            --rb: #d8d0c3;
+            --sky1: #241a12;
+            --sky2: #1a1410;
+            --gnd: #2a221b;
+            --sh: 0 10px 30px rgba(0, 0, 0, .4);
+            color-scheme: dark
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        [hidden] {
+            display: none !important
+        }
+
+        body {
+            margin: 0;
+            color: var(--tx);
+            font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(1100px 520px at 12% -8%, var(--g1), transparent 70%), var(--bg);
+            min-height: 100vh
+        }
+
+        .wrap {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 14px 16px 20px
+        }
+
+        header.top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px
+        }
+
+        .eyebrow {
+            font-size: .72rem;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ac);
+            font-weight: 700
+        }
+
+        h1 {
+            margin: 2px 0 0;
+            font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+            letter-spacing: -.02em;
+            line-height: 1.1
+        }
+
+        .hr {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: .85rem;
+            border: 1px solid currentColor
+        }
+
+        .pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor
+        }
+
+        .pill.ok {
+            color: var(--ok);
+            background: color-mix(in srgb, var(--ok) 12%, transparent)
+        }
+
+        .pill.bad {
+            color: var(--bad);
+            background: color-mix(in srgb, var(--bad) 12%, transparent)
+        }
+
+        .pill.wr {
+            color: #d97706;
+            background: color-mix(in srgb, #d97706 12%, transparent)
+        }
+
+        .ok {
+            color: var(--ok)
+        }
+
+        .bad {
+            color: var(--bad)
+        }
+
+        .am {
+            color: #d97706
+        }
+
+        .bento {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(12, minmax(0, 1fr))
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: var(--sh);
+            min-width: 0
+        }
+
+        .card h2 {
+            margin: 0 0 8px;
+            font-size: .7rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--mu);
+            font-weight: 700
+        }
+
+        .card h2.sub {
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px solid var(--bd)
+        }
+
+        canvas {
+            display: block;
+            width: 100%
+        }
+
+        .t-oven {
+            grid-column: 1/6;
+            grid-row: 1/3;
+            display: flex;
+            flex-direction: column
+        }
+
+        .t-why {
+            grid-column: 6/9;
+            grid-row: 1
+        }
+
+        .t-tune {
+            grid-column: 9/13;
+            grid-row: 1
+        }
+
+        .t-fig {
+            grid-column: 6/13;
+            grid-row: 2
+        }
+
+        .t-imp {
+            grid-column: 1/7;
+            grid-row: 3
+        }
+
+        .t-prec {
+            grid-column: 7/13;
+            grid-row: 3
+        }
+
+        @media(max-width:1100px) {
+            .bento {
+                grid-template-columns: 1fr
+            }
+
+            .bento>* {
+                grid-column: auto !important;
+                grid-row: auto !important
+            }
+        }
+
+        .scene {
+            position: relative;
+            flex: 1;
+            min-height: 420px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--bd);
+            background: linear-gradient(var(--sky1), var(--sky2))
+        }
+
+        .hud {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            z-index: 2
+        }
+
+        .hc {
+            background: color-mix(in srgb, var(--card) 88%, transparent);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 3px 10px;
+            line-height: 1.25;
+            backdrop-filter: blur(4px)
+        }
+
+        .hc small {
+            display: block;
+            font-size: .62rem;
+            color: var(--mu);
+            letter-spacing: .06em
+        }
+
+        .hc b {
+            font: 700 .88rem "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 10px
+        }
+
+        .btn {
+            font: inherit;
+            font-weight: 600;
+            font-size: .86rem;
+            border: 1px solid var(--bd);
+            background: var(--card);
+            color: var(--tx);
+            padding: 7px 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .btn:hover {
+            border-color: var(--ac);
+            transform: translateY(-1px)
+        }
+
+        .btn.pri {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .ib {
+            width: 38px;
+            padding: 7px 0;
+            text-align: center
+        }
+
+        .sp {
+            flex: 1
+        }
+
+        kbd {
+            font: 600 .66rem "JetBrains Mono", monospace;
+            border: 1px solid currentColor;
+            border-radius: 5px;
+            padding: 0 5px;
+            margin-left: 6px;
+            opacity: .6
+        }
+
+        .tog {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            font-size: .86rem;
+            cursor: pointer
+        }
+
+        .tog input {
+            accent-color: var(--ac);
+            width: 16px;
+            height: 16px
+        }
+
+        .chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+            align-items: center
+        }
+
+        .chip {
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 600;
+            border: 1px solid var(--bd);
+            background: transparent;
+            color: var(--mu);
+            padding: 5px 12px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .chip:hover {
+            border-color: var(--ac);
+            color: var(--ac)
+        }
+
+        .chip.on {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #fff
+        }
+
+        .row {
+            margin: 5px 0
+        }
+
+        .rl {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 1px
+        }
+
+        .rl .lab {
+            font-size: 1rem;
+            min-width: 34px
+        }
+
+        .rl small {
+            color: var(--mu);
+            flex: 1;
+            font-size: .76rem
+        }
+
+        .rl output {
+            font: 700 .86rem "JetBrains Mono", monospace;
+            color: var(--ac)
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--ac);
+            height: 18px;
+            margin: 0
+        }
+
+        .pt {
+            margin: 0 0 6px;
+            font-size: .88rem
+        }
+
+        .src {
+            font-size: .74rem;
+            color: var(--mu)
+        }
+
+        mjx-container {
+            max-width: 100%
+        }
+
+        mjx-container[display="true"] {
+            margin: .3em 0 !important;
+            font-size: 90%
+        }
+
+        .eqs {
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%
+        }
+
+        .lg {
+            font-size: .76rem;
+            color: var(--mu);
+            margin-top: 5px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .lg i {
+            display: inline-block;
+            width: 14px;
+            height: 3px;
+            border-radius: 2px;
+            margin-right: 5px;
+            vertical-align: middle
+        }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
+
+        @media(max-width:900px) {
+            .kpis {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .kc {
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            padding: 10px;
+            min-width: 0
+        }
+
+        .kh {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 4px
+        }
+
+        .kh b {
+            font-size: .95rem
+        }
+
+        .kh small {
+            color: var(--mu);
+            font-size: .72rem
+        }
+
+        .kt {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .82rem
+        }
+
+        .kt th {
+            font-size: .66rem;
+            color: var(--mu);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            text-align: right
+        }
+
+        .kt td {
+            padding: 3px 0;
+            border-top: 1px solid var(--bd);
+            text-align: right;
+            font-family: "JetBrains Mono", monospace;
+            font-weight: 600
+        }
+
+        .kt td:first-child,
+        .kt th:first-child {
+            text-align: left;
+            font-family: Inter, sans-serif;
+            font-weight: 500;
+            color: var(--mu)
+        }
+
+        .kf {
+            font-size: .74rem;
+            color: var(--mu);
+            margin-top: 6px
+        }
+
+        .two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        @media(max-width:700px) {
+            .two {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .vd {
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            font-size: .86rem;
+            font-weight: 600;
+            border: 1px solid currentColor;
+            background: color-mix(in srgb, currentColor 9%, transparent)
+        }
+
+        .note {
+            font-size: .8rem;
+            color: var(--mu);
+            margin: 6px 0 0
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header class="top">
+            <div>
+                <div class="eyebrow">04 · Ejemplos aplicados · Ingeniería Industrial · Ejemplo 3</div>
+                <h1>Control de temperatura en un horno industrial</h1>
+            </div>
+            <div class="hr"><span id="pill" class="pill"></span><button id="theme" class="btn ib"
+                    title="Cambiar tema claro u oscuro">◐</button></div>
+        </header>
+
+        <main class="bento">
+
+            <section class="card t-oven">
+                <h2>Planta térmica · Horno de tratamiento con controlador PID</h2>
+                <div class="scene">
+                    <div class="hud">
+                        <div class="hc"><small>TEMPERATURA</small><b id="hT"></b></div>
+                        <div class="hc"><small>CONSIGNA</small><b id="hS"></b></div>
+                        <div class="hc"><small>POTENCIA</small><b id="hP"></b></div>
+                        <div class="hc"><small>ERROR</small><b id="hE"></b></div>
+                        <div class="hc"><small>TIEMPO</small><b id="ht"></b></div>
+                    </div>
+                    <canvas id="ov" data-fill style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+                </div>
+                <div class="toolbar">
+                    <button id="go" class="btn pri">Reiniciar ciclo<kbd>R</kbd></button>
+                    <label class="tog"><input type="checkbox" id="auto" checked><span>Repetir</span></label>
+                    <span class="chips" style="margin:0"><span class="src">Controlador:</span><button class="chip"
+                            data-show="pi">PI</button><button class="chip on" data-show="pid">PID</button></span>
+                    <span class="sp"></span>
+                    <button id="pause" class="btn"><span id="pl">Pausar</span><kbd>␣</kbd></button>
+                </div>
+            </section>
+
+            <section class="card t-why">
+                <h2>Proceso y por qué anticipar (D)</h2>
+                <p class="pt">En tratamiento térmico de metales, curado de materiales o procesamiento de alimentos, la
+                    temperatura debe mantenerse en un margen estrecho. Hornos e intercambiadores tienen <b>dinámica
+                        lenta, gran inercia térmica y retardos</b>: un control que solo reacciona al error presente
+                    corrige tarde y sobrepasa la consigna. <span class="src">(Seborg et al., 2016)</span></p>
+                <div class="chips">
+                    <button class="chip on" data-loop="horno">Horno</button>
+                    <button class="chip" data-loop="interc">Intercambiador</button>
+                    <button class="chip" data-loop="flujo">Flujo (ruidoso)</button>
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(\tau\)</span><small>inercia térmica</small><output
+                            id="tauO"></output></div><input type="range" id="tau" min="1" max="10" step="any" value="8">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(L\)</span><small>retardo del proceso</small><output
+                            id="lgO"></output></div><input type="range" id="lg" min="0.1" max="3" step="any" value="1">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">ruido</span><small>del sensor</small><output id="nzO"></output>
+                    </div><input type="range" id="nz" min="0" max="3" step="0.1" value="1">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">carga</span><small>puerta abierta / perturbación</small><output
+                            id="dmO"></output></div><input type="range" id="dm" min="0" max="25" step="0.5" value="12">
+                </div>
+                <p class="note" id="whyDyn"></p>
+            </section>
+
+            <section class="card t-tune">
+                <h2>Sintonización · PID con Ziegler–Nichols</h2>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(K_p\)</span><small>ganancia proporcional</small><output
+                            id="kpO"></output></div><input type="range" id="kp" min="0.05" max="4" step="0.05"
+                        value="1">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(T_i\)</span><small>tiempo integral</small><output
+                            id="tiO"></output></div><input type="range" id="ti" min="0.5" max="40" step="0.1" value="4">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(T_d\)</span><small>tiempo derivativo</small><output
+                            id="tdO"></output></div><input type="range" id="td" min="0" max="6" step="0.05" value="1">
+                </div>
+                <div class="row">
+                    <div class="rl"><span class="lab">\(N\)</span><small>filtro derivativo</small><output
+                            id="NO"></output></div><input type="range" id="N" min="2" max="50" step="1" value="10">
+                </div>
+                <div class="toolbar" style="margin-top:6px"><button id="zn" class="btn pri">Sintonizar con
+                        Ziegler–Nichols</button><button id="notd" class="btn">Sin D</button></div>
+                <label class="tog" style="margin-top:8px"><input type="checkbox" id="meas"><span>Derivada sobre la
+                        medición (sin golpe)</span></label>
+                <div class="eqs" id="znTex"></div>
+                <p class="src">(Ziegler &amp; Nichols, 1942)</p>
+            </section>
+
+            <section class="card t-fig">
+                <h2>Respuesta del proceso ante el escalón de consigna · PI vs PID</h2>
+                <canvas id="pt" height="235"></canvas>
+                <canvas id="pp" height="95" style="margin-top:6px"></canvas>
+                <div class="lg"><span><i style="background:var(--wr)"></i>PI (sin D)</span><span><i
+                            style="background:var(--ok)"></i>PID</span><span><i
+                            style="background:var(--ac)"></i>anticipación T + T<sub>d</sub>·dT/dt</span><span>banda
+                        verde = tolerancia · línea roja = límite de la pieza</span><span>abajo: potencia del calentador
+                        (%)</span></div>
+            </section>
+
+            <section class="card t-imp">
+                <h2>Impacto en la operación (enfoque industrial)</h2>
+                <div class="kpis" id="kpi"></div>
+            </section>
+
+            <section class="card t-prec">
+                <h2>Variabilidad y precaución: ¿cuándo evitar la acción D?</h2>
+                <div class="two">
+                    <div><canvas id="hs" height="170"></canvas>
+                        <div class="lg"><span>Distribución de la temperatura (parte final)</span><span><i
+                                    style="background:var(--wr)"></i>PI</span><span><i
+                                    style="background:var(--ok)"></i>PID</span></div>
+                    </div>
+                    <div><canvas id="wr" height="170"></canvas>
+                        <div class="lg"><span>Desgaste del actuador (carreras de válvula o resistencia)</span></div>
+                    </div>
+                </div>
+                <div class="vd" id="verd"></div>
+                <p class="note">La acción D no es adecuada para todo lazo: en flujo o nivel con señal ruidosa se evita o
+                    se filtra fuerte, pues el ruido amplificado desgasta válvulas y actuadores (Seborg et al., 2016). La
+                    selección depende de la dinámica y del nivel de ruido de cada variable.</p>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            var $ = function (i) { return document.getElementById(i) };
+            var LOOPS = {
+                horno: { name: 'Horno', unit: '°C', T0: 25, sp: 400, K: 6, t1: 8, t2: 2, L: 1, T: 90, sig: 0.5, dm: 12, td: 60, dd: 3, tol: 10, lim: 15, P: 30, kpR: [0.05, 4, 0.05], tiR: [0.5, 40, 0.1], tdR: [0, 6, 0.05] },
+                interc: { name: 'Intercambiador', unit: '°C', T0: 20, sp: 70, K: 1, t1: 3, t2: 1, L: 0.5, T: 40, sig: 0.3, dm: 10, td: 26, dd: 1.5, tol: 2, lim: 3, P: 15, kpR: [0.2, 12, 0.1], tiR: [0.2, 20, 0.1], tdR: [0, 3, 0.05] },
+                flujo: { name: 'Flujo', unit: 'L/min', T0: 20, sp: 60, K: 0.8, t1: 0.5, t2: 0.1, L: 0.05, T: 8, sig: 1.5, dm: 10, td: 5.2, dd: 0.3, tol: 4, lim: 6, P: 2, kpR: [0.5, 25, 0.1], tiR: [0.05, 4, 0.01], tdR: [0, 0.5, 0.005] }
+            };
+            var Lp, C = { kp: 1, ti: 4, td: 1, N: 10, meas: false }, nzm = 1, SHOW = 'pid', R = {}, Z = {}, play = { t: 0, run: true, hold: 0 }, pend = true, lastR = 0, last = 0, NZ = [], n = 3000;
+            (function () { var s = 11; function r() { s = (s * 16807) % 2147483647; return s / 2147483647 } for (var k = 0; k <= n; k++)NZ.push(Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(6.2832 * r())) })();
+            function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim() }
+            function tx(el) { if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise([el]).catch(function () { }) } }
+            function fmt(v, d) { var t = v.toFixed(d === undefined ? 2 : d); return t.indexOf('.') >= 0 ? t.replace(/\.?0+$/, '') : t }
+
+            /*SIM-START*/
+            function zn(L) {
+                var lo = 1e-4, hi = 1e4, f = function (w) { return L.L * w + Math.atan(L.t1 * w) + Math.atan(L.t2 * w) - Math.PI };
+                for (var i = 0; i < 80; i++) { var m = Math.sqrt(lo * hi); if (f(m) > 0) hi = m; else lo = m }
+                var w = Math.sqrt(lo * hi);
+                return { w: w, Ku: Math.sqrt((1 + L.t1 * L.t1 * w * w) * (1 + L.t2 * L.t2 * w * w)) / L.K, Tu: 2 * Math.PI / w };
+            }
+            function sim(c, L, sg) {
+                var dt = L.T / n, nd = Math.max(0, Math.round(L.L / dt)), buf = new Float32Array(Math.max(1, nd)), bi = 0,
+                    a1 = 1 - Math.exp(-dt / L.t1), a2 = 1 - Math.exp(-dt / L.t2), af = c.td > 0 ? 1 - Math.exp(-dt * c.N / c.td) : 1,
+                    y1 = 0, y2 = 0, ig = 0, xf = c.meas ? -L.T0 : 0, Y = new Float32Array(n + 1), U = new Float32Array(n + 1), M = new Float32Array(n + 1),
+                    d0 = Math.round(L.td / dt), d1 = Math.round((L.td + L.dd) / dt), useI = c.ti < 900;
+                for (var k = 0; k <= n; k++) {
+                    var T = L.T0 + y2, ym = T + sg * L.sig * NZ[k], e = L.sp - ym, v = c.meas ? -ym : e, dterm = 0;
+                    if (c.td > 0) { xf += af * (v - xf); dterm = c.kp * c.N * (v - xf) }
+                    var uu = c.kp * e + ig + dterm, u = Math.max(0, Math.min(100, uu));
+                    if (useI && !((uu > 100 && e > 0) || (uu < 0 && e < 0))) ig += c.kp / c.ti * e * dt;
+                    Y[k] = T; M[k] = ym; U[k] = u;
+                    var ud = u; if (nd > 0) { ud = buf[bi]; buf[bi] = u; bi = (bi + 1) % nd }
+                    var dist = (k >= d0 && k < d1) ? L.dm : 0, x = L.K * (ud - dist);
+                    y1 += a1 * (x - y1); y2 += a2 * (y1 - y2);
+                }
+                return { Y: Y, U: U, M: M, dt: dt, n: n };
+            }
+            function metrics(r, L) {
+                var Y = r.Y, U = r.U, dt = r.dt, pk = -1e9, i, above = 0, E = 0, W = 0;
+                for (i = 0; i <= n; i++) { if (Y[i] > pk) pk = Y[i]; if (Y[i] > L.sp + L.tol) above += dt; E += U[i] * dt; if (i) W += Math.abs(U[i] - U[i - 1]) }
+                var os = Math.max(0, pk - L.sp), k0 = Math.floor(n * 0.55), s = 0, s2 = 0, m = n - k0 + 1;
+                for (i = k0; i <= n; i++) { s += Y[i]; s2 += Y[i] * Y[i] }
+                var mu = s / m, sd = Math.sqrt(Math.max(0, s2 / m - mu * mu)), kd = Math.floor(L.td / dt);
+                for (i = kd; i >= 0; i--)if (Math.abs(Y[i] - L.sp) > L.tol) break;
+                var ts = i < 0 ? 0 : (i >= kd ? null : (i + 1) * dt);
+                return {
+                    pk: pk, os: os, osp: os / (L.sp - L.T0) * 100, above: above, E: E / 100 * L.P / 60, W: W / 100, mu: mu, sd: sd, ts: ts, k0: k0,
+                    cp: sd > 1e-9 ? 2 * L.lim / (6 * sd) : 99, cpk: sd > 1e-9 ? Math.min(L.sp + L.lim - mu, mu - (L.sp - L.lim)) / (3 * sd) : 99
+                };
+            }
+            /*SIM-END*/
+
+            function recompute() {
+                Z = zn(Lp);
+                R.pi = sim({ kp: C.kp, ti: C.ti, td: 0, N: C.N, meas: C.meas }, Lp, nzm);
+                R.pid = sim(C, Lp, nzm);
+                R.mpi = metrics(R.pi, Lp); R.mpid = metrics(R.pid, Lp);
+                var b = R.mpid, p = $('pill');
+                p.textContent = 'PID: sobreimpulso ' + fmt(b.os, 1) + ' ' + Lp.unit + ' · Cpk ' + fmt(Math.min(b.cpk, 9.9), 1);
+                p.className = 'pill ' + (b.above > 0 ? 'bad' : (b.cpk >= 1.33 ? 'ok' : 'wr'));
+                pend = true;
+            }
+
+            /* ---------- controles ---------- */
+            var B = {
+                tau: { g: function () { return Lp.t1 }, s: function (v) { Lp.t1 = v }, f: function (v) { return fmt(v, 2) + ' min' } },
+                lg: { g: function () { return Lp.L }, s: function (v) { Lp.L = v }, f: function (v) { return fmt(v, 2) + ' min' } },
+                nz: { g: function () { return nzm }, s: function (v) { nzm = v }, f: function (v) { return '×' + fmt(v, 1) } },
+                dm: { g: function () { return Lp.dm }, s: function (v) { Lp.dm = v }, f: function (v) { return fmt(v, 1) + ' %' } },
+                kp: { g: function () { return C.kp }, s: function (v) { C.kp = v }, f: function (v) { return fmt(v, 2) } },
+                ti: { g: function () { return C.ti }, s: function (v) { C.ti = v }, f: function (v) { return fmt(v, 2) + ' min' } },
+                td: { g: function () { return C.td }, s: function (v) { C.td = v }, f: function (v) { return fmt(v, 3) + ' min' } },
+                N: { g: function () { return C.N }, s: function (v) { C.N = v }, f: function (v) { return fmt(v, 0) } }
+            };
+            function out(id) { $(id + 'O').textContent = B[id].f(B[id].g()) }
+            Object.keys(B).forEach(function (id) {
+                var el = $(id);
+                el.addEventListener('input', function () { B[id].s(+el.value); out(id); recompute() });
+                el.addEventListener('change', restart);
+            });
+            function setSl(id, v, mn, mx, st) { var el = $(id); if (mn !== undefined) { el.min = mn; el.max = mx; el.step = st } v = Math.max(+el.min, Math.min(+el.max, v)); el.value = v; B[id].s(v); out(id) }
+            function setLoop(k) {
+                Lp = Object.assign({}, LOOPS[k]);
+                setSl('tau', Lp.t1, Lp.t1 * 0.25, Lp.t1 * 2.5, 'any'); setSl('lg', Lp.L, Lp.L * 0.25, Lp.L * 3, 'any');
+                nzm = 1; setSl('nz', 1); setSl('dm', Lp.dm);
+                setSl('kp', 1, Lp.kpR[0], Lp.kpR[1], Lp.kpR[2]); setSl('ti', 1, Lp.tiR[0], Lp.tiR[1], Lp.tiR[2]); setSl('td', 0, Lp.tdR[0], Lp.tdR[1], Lp.tdR[2]);
+                doZN();
+            }
+            function doZN() {
+                var z = zn(Lp); setSl('kp', 0.6 * z.Ku); setSl('ti', z.Tu / 2); setSl('td', z.Tu / 8); setSl('N', 10); C.meas = false; $('meas').checked = false;
+                recompute(); restart();
+            }
+            $('zn').onclick = doZN;
+            $('notd').onclick = function () { setSl('td', 0); recompute(); restart() };
+            $('meas').onchange = function () { C.meas = $('meas').checked; recompute(); restart() };
+            document.querySelectorAll('[data-loop]').forEach(function (b) { b.onclick = function () { document.querySelectorAll('[data-loop]').forEach(function (o) { o.classList.toggle('on', o === b) }); setLoop(b.dataset.loop) } });
+            document.querySelectorAll('[data-show]').forEach(function (b) { b.onclick = function () { SHOW = b.dataset.show; document.querySelectorAll('[data-show]').forEach(function (o) { o.classList.toggle('on', o === b) }); restart() } });
+            function restart() { play.t = 0; play.hold = 0; play.run = true; $('pl').textContent = 'Pausar' }
+            $('go').onclick = restart;
+            $('pause').onclick = function () { play.run = !play.run; $('pl').textContent = play.run ? 'Pausar' : 'Reanudar' };
+            $('theme').onclick = function () { var r = document.documentElement, c = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'); r.setAttribute('data-theme', c === 'dark' ? 'light' : 'dark') };
+            document.addEventListener('keydown', function (e) {
+                var t = e.target.tagName; if (t === 'INPUT' && e.target.type !== 'checkbox') return;
+                if (e.key.toLowerCase() === 'r') restart(); else if (e.code === 'Space') { e.preventDefault(); if (t === 'BUTTON') e.target.blur(); $('pause').click() }
+            });
+
+            /* ---------- textos ---------- */
+            function cls(v) { return v >= 1.33 ? 'ok' : (v >= 1 ? 'am' : 'bad') }
+            function renderKpi() {
+                var a = R.mpi, b = R.mpid, u = Lp.unit;
+                function row(l, x, y, cx, cy) { return '<tr><td>' + l + '</td><td class="' + (cx || '') + '">' + x + '</td><td class="' + (cy || '') + '">' + y + '</td></tr>' }
+                function card(t, s, rows, foot) { return '<div class="kc"><div class="kh"><b>' + t + '</b><small>' + s + '</small></div><table class="kt"><tr><th></th><th>PI</th><th>PID</th></tr>' + rows + '</table><div class="kf">' + foot + '</div></div>' }
+                var q = card('Calidad', 'sobreimpulso y pieza',
+                    row('Sobreimpulso (' + u + ')', fmt(a.os, 1), fmt(b.os, 1)) + row('Sobreimpulso (%)', fmt(a.osp, 0) + ' %', fmt(b.osp, 0) + ' %')
+                    + row('Fuera de límite (min)', fmt(a.above, 1), fmt(b.above, 1), a.above > 0 ? 'bad' : 'ok', b.above > 0 ? 'bad' : 'ok')
+                    + row('Pieza', a.above > 0 ? '✗ dañada' : '✓ OK', b.above > 0 ? '✗ dañada' : '✓ OK', a.above > 0 ? 'bad' : 'ok', b.above > 0 ? 'bad' : 'ok'),
+                    'Un sobreimpulso puede dañar el material o sacarlo de especificación.');
+                var dE = (b.E - a.E) / a.E * 100,
+                    e = card('Eficiencia energética', 'energía del ciclo',
+                        row('Energía (kWh)', fmt(a.E, 2), fmt(b.E, 2)) + row('Respecto a PI', '—', (dE > 0 ? '+' : '') + fmt(dE, 1) + ' %', null, dE <= 0 ? 'ok' : 'am'),
+                        'Evitar el calentamiento excesivo reduce consumo.');
+                var v = card('Variabilidad del proceso', 'parte final, con perturbación',
+                    row('Desviación σ (' + u + ')', fmt(a.sd, 2), fmt(b.sd, 2)) + row('Cp', fmt(Math.min(a.cp, 9.9), 2), fmt(Math.min(b.cp, 9.9), 2), cls(a.cp), cls(b.cp)) + row('Cpk', fmt(Math.min(a.cpk, 9.9), 2), fmt(Math.min(b.cpk, 9.9), 2), cls(a.cpk), cls(b.cpk)),
+                    'Menor dispersión mejora los índices Cp/Cpk y la mejora continua.');
+                $('kpi').innerHTML = q + e + v;
+            }
+            function renderTune() {
+                var ratio = C.td > 0 ? C.ti / C.td : 0;
+                $('znTex').innerHTML = '\\[C(s)=K_p\\Big(1+\\frac{1}{T_i\\,s}+\\frac{T_d\\,s}{1+T_d\\,s/N}\\Big)\\]'
+                    + '\\[K_u=' + fmt(Z.Ku) + ',\\ T_u=' + fmt(Z.Tu, 1) + '\\ \\text{min}\\;\\Rightarrow\\;K_p=0.6K_u,\\ T_i=\\tfrac{T_u}{2},\\ T_d=\\tfrac{T_u}{8}\\;\\Rightarrow\\;T_i=4\\,T_d\\]'
+                    + '\\[\\tfrac{T_i}{T_d}=' + (C.td > 0 ? fmt(ratio, 1) : '\\infty') + '\\]';
+            }
+            function renderWhy() {
+                var tau = Lp.t1 + Lp.t2, r = Lp.L / tau;
+                $('whyDyn').innerHTML = 'Este lazo (' + Lp.name + '): inercia total ≈ <b>' + fmt(tau, 1) + ' min</b>, retardo <b>' + fmt(Lp.L, 2) + ' min</b> (L/τ = ' + fmt(r, 2) + '). ' + (Lp.sig > 1 ? 'Señal <b>ruidosa</b>: la D amplifica ese ruido.' : 'Señal limpia y dinámica lenta: buen candidato para anticipar con D.')
+            }
+            function renderVerd() {
+                var a = R.mpi, b = R.mpid, wr = b.W / Math.max(a.W, 1e-6), d = $('verd'), t, c;
+                if (C.td <= 0) { t = 'Sin acción D: PID = PI. Sube T<sub>d</sub> para ver qué aporta la anticipación.'; c = 'am' }
+                else if (wr > 4) { t = 'Precaución: la D amplifica el ruido (desgaste del actuador ×' + fmt(wr, 1) + '). Filtra fuerte (N bajo) o evita la D en este lazo.'; c = 'bad' }
+                else if (b.os < a.os * 0.9 || b.cpk > a.cpk * 1.05) { t = 'La D aporta: sobreimpulso ' + fmt(a.os, 1) + ' → ' + fmt(b.os, 1) + ' ' + Lp.unit + ', Cpk ' + fmt(Math.min(a.cpk, 9.9), 2) + ' → ' + fmt(Math.min(b.cpk, 9.9), 2) + ', con desgaste moderado (×' + fmt(wr, 1) + ').'; c = 'ok' }
+                else { t = 'En este lazo la D casi no mejora la respuesta (desgaste ×' + fmt(wr, 1) + '). Ajusta T<sub>d</sub> o N.'; c = 'am' }
+                d.className = 'vd ' + c; d.innerHTML = t;
+            }
+            function renderAll() { renderKpi(); renderTune(); renderWhy(); renderVerd(); tx($('znTex')) }
+
+            /* ---------- dibujo ---------- */
+            function setup(c) {
+                var fl = c.hasAttribute('data-fill'), r = window.devicePixelRatio || 1, w = c.clientWidth, h = fl ? c.clientHeight : +(c.dataset.h || c.getAttribute('height'));
+                if (!fl) { c.dataset.h = h; c.style.height = h + 'px' }
+                if (c.width !== Math.round(w * r) || c.height !== Math.round(h * r)) { c.width = Math.round(w * r); c.height = Math.round(h * r) }
+                var x = c.getContext('2d'); x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, w, h); return { x: x, w: w, h: h };
+            }
+            function rrect(x, px, py, w, h, r) {
+                x.beginPath(); x.moveTo(px + r, py); x.lineTo(px + w - r, py); x.quadraticCurveTo(px + w, py, px + w, py + r);
+                x.lineTo(px + w, py + h - r); x.quadraticCurveTo(px + w, py + h, px + w - r, py + h); x.lineTo(px + r, py + h);
+                x.quadraticCurveTo(px, py + h, px, py + h - r); x.lineTo(px, py + r); x.quadraticCurveTo(px, py, px + r, py); x.closePath();
+            }
+            function ix() { return Math.min(n, Math.floor(play.t / R.pid.dt)) }
+
+            function drawOven() {
+                var c = setup($('ov')), x = c.x, W = c.w, H = c.h, r = R[SHOW], i = ix(), T = r.Y[i], ym = r.M[i], u = r.U[i], L = Lp, tm = i * r.dt;
+                var dark = (document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light')) === 'dark';
+                var ox = W * 0.045, oy = H * 0.21, ow = W * 0.56, oh = H * 0.53;
+                var f = Math.max(0, Math.min(1, (T - L.T0) / ((L.sp - L.T0) * 1.2)));
+                var g = u / 100;
+                var doorOpen = (tm >= L.td && tm <= L.td + L.dd && L.dm > 0);
+
+                // 1. Retícula técnica de planta industrial
+                var step = 36;
+                x.strokeStyle = dark ? 'rgba(216,208,195,0.05)' : 'rgba(59,58,54,0.05)';
+                x.lineWidth = 1;
+                for (var gx = ox % step; gx < W; gx += step) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, oy + oh + 28); x.stroke() }
+                for (var gy2 = oy % step; gy2 < oy + oh + 28; gy2 += step) { x.beginPath(); x.moveTo(0, gy2); x.lineTo(W, gy2); x.stroke() }
+
+                // 2. Piso de concreto industrial
+                var floorY = oy + oh + 26;
+                var floorGrad = x.createLinearGradient(0, floorY, 0, H);
+                floorGrad.addColorStop(0, dark ? '#26201b' : '#dfd8cc');
+                floorGrad.addColorStop(1, dark ? '#181410' : '#cbc2b3');
+                x.fillStyle = floorGrad; x.fillRect(0, floorY, W, H - floorY);
+                x.strokeStyle = dark ? '#4a3f35' : '#9c9486'; x.lineWidth = 2;
+                x.beginPath(); x.moveTo(0, floorY); x.lineTo(W, floorY); x.stroke();
+
+                // Sombra de contacto del horno sobre el piso
+                var shGrad = x.createRadialGradient(ox + ow / 2, floorY, 12, ox + ow / 2, floorY, ow * 0.62);
+                shGrad.addColorStop(0, 'rgba(0,0,0,0.34)');
+                shGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                x.fillStyle = shGrad; x.fillRect(ox - 20, floorY - 4, ow + 40, 12);
+
+                // 3. Ducto de extracción superior (chimenea con brida)
+                var chX = ox + ow * 0.74, chW = 22;
+                var steelGrad = x.createLinearGradient(ox, 0, ox + ow, 0);
+                steelGrad.addColorStop(0, dark ? '#332d27' : '#94a3b8');
+                steelGrad.addColorStop(0.5, dark ? '#4d443c' : '#cbd5e1');
+                steelGrad.addColorStop(1, dark ? '#29231e' : '#64748b');
+
+                x.fillStyle = steelGrad;
+                x.fillRect(chX, oy - 24, chW, 24);
+                x.strokeStyle = dark ? '#5c5248' : '#475569'; x.lineWidth = 1.2;
+                x.strokeRect(chX, oy - 24, chW, 24);
+                // Brida de acople
+                x.fillRect(chX - 4, oy - 12, chW + 8, 4);
+
+                // 4. Patas estructurales de acero con placas base y pernos
+                [ox + 22, ox + ow - 40].forEach(function (lx) {
+                    x.fillStyle = '#292524';
+                    x.fillRect(lx, oy + oh, 18, 22);
+                    x.fillStyle = '#57534e';
+                    x.fillRect(lx - 5, oy + oh + 20, 28, 6);
+                    // Pernos
+                    x.fillStyle = '#a8a29e';
+                    x.fillRect(lx - 3, oy + oh + 17, 3, 3); x.fillRect(lx + 18, oy + oh + 17, 3, 3);
+                });
+
+                // 5. Carcasa exterior del horno industrial
+                x.fillStyle = steelGrad;
+                rrect(x, ox, oy, ow, oh, 6); x.fill();
+                x.strokeStyle = dark ? '#63594f' : '#475569'; x.lineWidth = 2; x.stroke();
+
+                // Remaches metálicos perimetrales
+                x.fillStyle = dark ? '#1c1917' : '#334155';
+                for (var rx = ox + 10; rx <= ox + ow - 10; rx += 28) {
+                    x.beginPath(); x.arc(rx, oy + 6, 1.5, 0, Math.PI * 2); x.fill();
+                    x.beginPath(); x.arc(rx, oy + oh - 6, 1.5, 0, Math.PI * 2); x.fill();
+                }
+
+                // 6. Aislamiento refractario (ladrillo térmico en corte)
+                var pad = 13;
+                var cx0 = ox + pad, cy0 = oy + pad, cw = ow - pad * 2, ch = oh - pad * 2;
+                x.fillStyle = dark ? '#45271d' : '#d6c7b2';
+                x.fillRect(cx0, cy0, cw, ch);
+                // Junta de ladrillos refractarios en el marco
+                x.strokeStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(120,90,60,0.28)';
+                x.lineWidth = 1;
+                for (var bx = cx0; bx < cx0 + cw; bx += 18) {
+                    x.beginPath(); x.moveTo(bx, cy0); x.lineTo(bx, cy0 + 10); x.stroke();
+                    x.beginPath(); x.moveTo(bx + 9, cy0 + ch - 10); x.lineTo(bx + 9, cy0 + ch); x.stroke();
+                }
+
+                // 7. Cámara interior de calentamiento y radiación térmica
+                var inX = cx0 + 9, inY = cy0 + 9, inW = cw - 18, inH = ch - 18;
+                x.fillStyle = '#14110f';
+                x.fillRect(inX, inY, inW, inH);
+
+                // Resplandor radiante por temperatura interna y potencia de resistencias
+                var glowGrad = x.createRadialGradient(inX + inW / 2, inY + inH / 2, 10, inX + inW / 2, inY + inH / 2, Math.max(inW, inH) * 0.75);
+                glowGrad.addColorStop(0, 'rgba(255,' + Math.round(140 - 60 * f) + ',20,' + (0.12 + 0.52 * f) + ')');
+                glowGrad.addColorStop(1, 'rgba(220,38,38,' + (0.04 + 0.22 * f) + ')');
+                x.fillStyle = glowGrad;
+                x.fillRect(inX, inY, inW, inH);
+                x.strokeStyle = '#292524'; x.lineWidth = 1.5; x.strokeRect(inX, inY, inW, inH);
+
+                // 8. Resistencias calefactoras helicoidales (superior e inferior)
+                var coilColor = 'hsl(' + (22 - 14 * g) + ',100%,' + (32 + 36 * g) + '%)';
+                [inY + 14, inY + inH - 14].forEach(function (yy) {
+                    x.save();
+                    if (g > 0.15) { x.shadowColor = 'rgba(255,100,20,' + (0.8 * g) + ')'; x.shadowBlur = 10 * g }
+                    x.strokeStyle = coilColor; x.lineWidth = 3.2; x.lineCap = 'round'; x.lineJoin = 'round';
+                    x.beginPath();
+                    var segs = 22, sx0 = inX + 14, sw = inW - 28;
+                    for (var k = 0; k <= segs; k++) {
+                        var px = sx0 + k * sw / segs, py = yy + (k % 2 ? 5.5 : -5.5);
+                        if (k) x.lineTo(px, py); else x.moveTo(px, py);
+                    }
+                    x.stroke();
+                    x.restore();
+                });
+
+                // 9. Soportes cerámicos y Pieza metálica en tratamiento
+                var pw = inW * 0.46, ph = inH * 0.27, px0 = inX + (inW - pw) / 2, py0 = inY + inH - ph - 28;
+                var bad = T > L.sp + L.tol, okb = Math.abs(T - L.sp) <= L.tol;
+
+                // Pedestales refractarios de apoyo
+                x.fillStyle = '#78716c';
+                x.fillRect(px0 + 8, py0 + ph, 10, 12);
+                x.fillRect(px0 + pw - 18, py0 + ph, 10, 12);
+                x.fillStyle = '#57534e';
+                x.fillRect(px0 - 10, py0 + ph + 12, pw + 20, 5);
+
+                // Cuerpo de la pieza metálica (gradiente de incandescencia térmica)
+                var pieceGrad = x.createLinearGradient(px0, py0, px0, py0 + ph);
+                var pHue = 215 - 202 * f;
+                var pSat = 25 + 70 * f;
+                var pLit = 36 + 22 * f;
+                pieceGrad.addColorStop(0, 'hsl(' + pHue + ',' + pSat + '%,' + (pLit + 10) + '%)');
+                pieceGrad.addColorStop(0.5, 'hsl(' + pHue + ',' + pSat + '%,' + pLit + '%)');
+                pieceGrad.addColorStop(1, 'hsl(' + pHue + ',' + pSat + '%,' + (pLit - 10) + '%)');
+
+                x.save();
+                if (f > 0.4) { x.shadowColor = 'rgba(255,110,30,' + (0.5 * f) + ')'; x.shadowBlur = 12 * f }
+                x.fillStyle = pieceGrad;
+                rrect(x, px0, py0, pw, ph, 3); x.fill();
+                x.restore();
+
+                x.lineWidth = 2.5;
+                x.strokeStyle = bad ? css('--bad') : (okb ? css('--ok') : '#94a3b8');
+                x.stroke();
+
+                x.fillStyle = '#fff'; x.font = '700 10px "JetBrains Mono",monospace'; x.textAlign = 'center';
+                x.fillText('PIEZA · ' + T.toFixed(0) + ' ' + L.unit, px0 + pw / 2, py0 + ph / 2 + 3.5);
+                x.textAlign = 'left';
+
+                // 10. Sonda Termopar Tipo K insertada desde el techo
+                var tcX = inX + inW * 0.24;
+                // Cabezal externo del termopar
+                x.fillStyle = '#0284c7'; rrect(x, tcX - 6, oy - 14, 12, 14, 2); x.fill();
+                // Vaina de acero inoxidable bajando hasta cerca de la pieza
+                x.strokeStyle = '#cbd5e1'; x.lineWidth = 2.5;
+                x.beginPath(); x.moveTo(tcX, oy); x.lineTo(tcX, py0 - 6); x.stroke();
+                x.fillStyle = '#ef4444'; x.beginPath(); x.arc(tcX, py0 - 6, 2.5, 0, Math.PI * 2); x.fill();
+
+                // 11. Efecto visual de puerta abierta / fuga térmica (perturbación)
+                if (doorOpen) {
+                    x.save();
+                    x.strokeStyle = '#38bdf8'; x.lineWidth = 2; x.setLineDash([4, 3]);
+                    x.strokeRect(inX + 3, inY + 3, inW - 6, inH - 6);
+                    x.setLineDash([]);
+                    // Flechas de fuga de calor / entrada de aire frío
+                    x.fillStyle = '#38bdf8'; x.font = '700 10px Inter,sans-serif';
+                    for (var ay = inY + 28; ay <= inY + inH - 28; ay += 26) {
+                        x.beginPath(); x.moveTo(inX + 26, ay); x.lineTo(inX - 6, ay); x.stroke();
+                        x.beginPath(); x.moveTo(inX - 11, ay); x.lineTo(inX - 4, ay - 4); x.lineTo(inX - 4, ay + 4); x.fill();
+                    }
+                    x.fillStyle = css('--wr');
+                    x.fillText('⚠ Puerta abierta · pérdida térmica (-' + L.dm + ' %)', ox, oy - 8);
+                    x.restore();
+                }
+
+                // Mensaje de estado operativo en el piso
+                x.font = '600 11.5px Inter,system-ui,sans-serif';
+                x.fillStyle = bad ? css('--bad') : (okb ? css('--ok') : css('--mu'));
+                x.fillText(bad ? '⚠ Sobretemperatura: pieza fuera de especificación' : (okb ? '✓ Régimen estable dentro de tolerancia (±' + L.tol + ' ' + L.unit + ')' : 'Fase transitoria de calentamiento…'), ox, oy + oh + 45);
+
+                // 12. Columna termométrica calibrada
+                var gx = ox + ow + 22, gw = 14, lo = L.T0, hi = L.sp + (L.sp - L.T0) * 0.4;
+                function G(v) { return oy + oh - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * oh }
+
+                rrect(x, gx, oy, gw, oh, 4); x.fillStyle = dark ? '#292524' : '#e2e8f0'; x.fill();
+                // Banda de tolerancia permitida
+                x.globalAlpha = 0.35; x.fillStyle = css('--ok');
+                x.fillRect(gx, G(L.sp + L.tol), gw, G(L.sp - L.tol) - G(L.sp + L.tol));
+                x.globalAlpha = 1;
+
+                // Nivel mercurio/térmico
+                var hotCol = 'hsl(' + (215 - 200 * f) + ',85%,' + (48 + 8 * f) + '%)';
+                x.fillStyle = hotCol;
+                x.fillRect(gx + 2, G(T), gw - 4, oy + oh - G(T));
+                x.strokeStyle = dark ? '#57534e' : '#94a3b8'; x.lineWidth = 1.2; rrect(x, gx, oy, gw, oh, 4); x.stroke();
+
+                // Marcadores de límite superior y SP
+                x.strokeStyle = css('--bad'); x.lineWidth = 2;
+                x.beginPath(); x.moveTo(gx - 5, G(L.sp + L.tol)); x.lineTo(gx + gw + 5, G(L.sp + L.tol)); x.stroke();
+                x.setLineDash([3, 2]); x.strokeStyle = css('--tx');
+                x.beginPath(); x.moveTo(gx - 5, G(L.sp)); x.lineTo(gx + gw + 5, G(L.sp)); x.stroke(); x.setLineDash([]);
+                x.fillStyle = css('--mu'); x.font = '700 9.5px "JetBrains Mono",monospace';
+                x.fillText('SP', gx + gw + 5, G(L.sp) + 3);
+
+                // 13. Gabinete industrial del Controlador PID
+                var dx = gx + gw + 28, dw = W - dx - 10;
+                if (dw > 74) {
+                    var chCab = oh * 0.72;
+                    // Caja metálica del gabinete
+                    x.fillStyle = dark ? '#292524' : '#334155';
+                    rrect(x, dx, oy, dw, chCab, 6); x.fill();
+                    x.strokeStyle = '#64748b'; x.lineWidth = 1.5; x.stroke();
+
+                    // Pantalla OLED oscura del controlador
+                    x.fillStyle = '#090d16';
+                    rrect(x, dx + 7, oy + 8, dw - 14, chCab - 16, 4); x.fill();
+                    x.strokeStyle = '#1e293b'; x.lineWidth = 1; x.stroke();
+
+                    // Encabezado y modo activo (PI vs PID)
+                    x.fillStyle = '#94a3b8'; x.font = '700 8.5px "JetBrains Mono",monospace';
+                    x.fillText('PLC · ' + SHOW.toUpperCase(), dx + 12, oy + 21);
+
+                    // LED indicador de estado de calidad
+                    var ledCol = bad ? css('--bad') : (okb ? css('--ok') : css('--ac'));
+                    x.fillStyle = ledCol; x.beginPath(); x.arc(dx + dw - 16, oy + 18, 3.2, 0, Math.PI * 2); x.fill();
+                    x.save(); x.shadowColor = ledCol; x.shadowBlur = 6; x.fill(); x.restore();
+
+                    // Lecturas digitales PV, SP y OUT
+                    x.fillStyle = '#f8fafc'; x.font = '700 13.5px "JetBrains Mono",monospace';
+                    x.fillText('PV ' + ym.toFixed(1), dx + 12, oy + 41);
+                    x.fillStyle = css('--ac'); x.font = '700 12px "JetBrains Mono",monospace';
+                    x.fillText('SP ' + L.sp.toFixed(0), dx + 12, oy + 58);
+
+                    x.fillStyle = '#94a3b8'; x.font = '600 10px "JetBrains Mono",monospace';
+                    x.fillText('OUT ' + u.toFixed(0) + '%', dx + 12, oy + 76);
+                    // Barra de potencia SSR / Tiristor
+                    rrect(x, dx + 12, oy + 82, dw - 24, 7, 3); x.fillStyle = '#1e293b'; x.fill();
+                    if (u > 0.5) {
+                        x.fillStyle = css('--ac');
+                        rrect(x, dx + 12, oy + 82, (dw - 24) * u / 100, 7, 3); x.fill();
+                    }
+
+                    // Indicador de acción derivativa Td
+                    x.fillStyle = SHOW === 'pid' && C.td > 0 ? '#34d399' : '#64748b';
+                    x.font = '600 8.5px "JetBrains Mono",monospace';
+                    x.fillText(SHOW === 'pid' && C.td > 0 ? 'D-ACTIVO Td=' + fmt(C.td, 2) : 'SIN ACCIÓN D', dx + 12, oy + 103);
+                }
+            }
+
+            function drawTemp() {
+                var c = setup($('pt')), x = c.x, W = c.w, H = c.h, pl = 46, pr = 14, pt = 10, pb = 22, iw = W - pl - pr, ih = H - pt - pb, L = Lp, TT = L.T, lo = L.T0 - 0.04 * (L.sp - L.T0), hi = L.sp + L.tol * 3, i;
+                [R.pi.Y, R.pid.Y].forEach(function (a) { for (i = 0; i <= n; i += 10)hi = Math.max(hi, a[i] * 1.02) });
+                function XX(t) { return pl + t / TT * iw } function YY(v) { return pt + ih - (v - lo) / (hi - lo) * ih }
+                x.globalAlpha = 0.08; x.fillStyle = css('--wr'); x.fillRect(XX(L.td), pt, XX(L.td + L.dd) - XX(L.td), ih); x.globalAlpha = 0.14; x.fillStyle = css('--ok'); x.fillRect(pl, YY(L.sp + L.tol), iw, YY(L.sp - L.tol) - YY(L.sp + L.tol)); x.globalAlpha = 1;
+                x.lineWidth = 1; x.strokeStyle = css('--bd'); x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif';
+                for (var g = 0; g <= 6; g++) { var tt = TT * g / 6; x.beginPath(); x.moveTo(XX(tt), pt); x.lineTo(XX(tt), pt + ih); x.stroke(); x.fillText(fmt(tt, TT < 20 ? 1 : 0), XX(tt) - 6, H - 6) }
+                x.fillText('t (min)', pl + iw - 40, H - 6); x.fillText(fmt(hi, 0) + ' ' + L.unit, 4, pt + 10); x.fillText(fmt(lo, 0), pl - 26, pt + ih);
+                if (L.dm > 0) x.fillText('perturbación', XX(L.td) + 3, pt + 12);
+                x.setLineDash([5, 4]); x.strokeStyle = css('--tx'); x.beginPath(); x.moveTo(pl, YY(L.sp)); x.lineTo(pl + iw, YY(L.sp)); x.stroke();
+                x.strokeStyle = css('--bad'); x.beginPath(); x.moveTo(pl, YY(L.sp + L.tol)); x.lineTo(pl + iw, YY(L.sp + L.tol)); x.stroke(); x.setLineDash([]);
+                x.fillStyle = css('--tx'); x.fillText('consigna ' + L.sp, pl + 4, YY(L.sp) + 13);
+                function ln(a, col, w) { x.strokeStyle = col; x.lineWidth = w; x.lineJoin = 'round'; x.beginPath(); for (var k = 0; k <= n; k += 3) { var px = XX(k * R.pid.dt), py = YY(a[k]); if (k) x.lineTo(px, py); else x.moveTo(px, py) } x.stroke() }
+                ln(R.pi.Y, css('--wr'), 2.2); ln(R.pid.Y, css('--ok'), 2.2);
+                var k = ix(), cx = XX(k * R.pid.dt); x.strokeStyle = css('--tx'); x.globalAlpha = 0.4; x.beginPath(); x.moveTo(cx, pt); x.lineTo(cx, pt + ih); x.stroke(); x.globalAlpha = 1;
+                var rr = R[SHOW], ya = rr.Y[k]; x.fillStyle = SHOW === 'pid' ? css('--ok') : css('--wr'); x.beginPath(); x.arc(cx, YY(ya), 5, 0, 7); x.fill();
+                if (SHOW === 'pid' && C.td > 0 && k > 2 && k < n - 2) {
+                    var sl = (rr.Y[k + 2] - rr.Y[k - 2]) / (4 * rr.dt), pr2 = ya + C.td * sl;
+                    x.strokeStyle = css('--ac'); x.lineWidth = 3; x.beginPath(); x.moveTo(cx, YY(ya)); x.lineTo(XX(k * rr.dt + C.td), YY(pr2)); x.stroke();
+                    x.fillStyle = css('--ac'); x.beginPath(); x.arc(XX(k * rr.dt + C.td), YY(pr2), 5, 0, 7); x.fill();
+                }
+            }
+            function drawPow() {
+                var c = setup($('pp')), x = c.x, W = c.w, H = c.h, pl = 46, pr = 14, pt = 6, pb = 6, iw = W - pl - pr, ih = H - pt - pb, TT = Lp.T;
+                function XX(t) { return pl + t / TT * iw } function YY(v) { return pt + ih - v / 100 * ih }
+                x.lineWidth = 1; x.strokeStyle = css('--bd');[0, 50, 100].forEach(function (v) { x.beginPath(); x.moveTo(pl, YY(v)); x.lineTo(pl + iw, YY(v)); x.stroke() });
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('100 %', 6, YY(100) + 10); x.fillText('0', pl - 12, YY(0)); x.fillText('u', 6, YY(50) + 4);
+                function ln(a, col) { x.strokeStyle = col; x.lineWidth = 1.6; x.beginPath(); for (var k = 0; k <= n; k += 2) { var px = XX(k * R.pid.dt), py = YY(a[k]); if (k) x.lineTo(px, py); else x.moveTo(px, py) } x.stroke() }
+                ln(R.pi.U, css('--wr')); ln(R.pid.U, css('--ok'));
+                var cx = XX(ix() * R.pid.dt); x.strokeStyle = css('--tx'); x.globalAlpha = 0.4; x.beginPath(); x.moveTo(cx, pt); x.lineTo(cx, pt + ih); x.stroke(); x.globalAlpha = 1;
+            }
+            function drawHist() {
+                var c = setup($('hs')), x = c.x, W = c.w, H = c.h, pl = 8, pr = 8, pt = 12, pb = 30, iw = W - pl - pr, ih = H - pt - pb, L = Lp, span = L.lim * 1.8, lo = L.sp - span, hi = L.sp + span, nb = 26, bw = iw / nb;
+                function bins(r, m) { var b = [], i, j, tot = n - m.k0 + 1; for (i = 0; i < nb; i++)b.push(0); for (i = m.k0; i <= n; i++) { j = Math.max(0, Math.min(nb - 1, Math.floor((r.Y[i] - lo) / (hi - lo) * nb))); b[j] += 1 / tot } return b }
+                var a = bins(R.pi, R.mpi), b = bins(R.pid, R.mpid), mx = 0, i;
+                for (i = 0; i < nb; i++)mx = Math.max(mx, a[i], b[i]);
+                function XX(v) { return pl + (v - lo) / (hi - lo) * iw }
+                x.globalAlpha = 0.55; x.fillStyle = css('--wr'); for (i = 0; i < nb; i++)x.fillRect(pl + i * bw + 1, pt + ih - a[i] / mx * ih, bw - 2, a[i] / mx * ih);
+                x.fillStyle = css('--ok'); for (i = 0; i < nb; i++)x.fillRect(pl + i * bw + 1, pt + ih - b[i] / mx * ih, bw - 2, b[i] / mx * ih); x.globalAlpha = 1;
+                x.strokeStyle = css('--bad'); x.lineWidth = 2; x.setLineDash([5, 4]);[L.sp - L.lim, L.sp + L.lim].forEach(function (v) { x.beginPath(); x.moveTo(XX(v), pt); x.lineTo(XX(v), pt + ih); x.stroke() });
+                x.strokeStyle = css('--tx'); x.lineWidth = 1.2; x.beginPath(); x.moveTo(XX(L.sp), pt); x.lineTo(XX(L.sp), pt + ih); x.stroke(); x.setLineDash([]);
+                x.strokeStyle = css('--bd'); x.lineWidth = 1; x.beginPath(); x.moveTo(pl, pt + ih); x.lineTo(pl + iw, pt + ih); x.stroke();
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('LIE', XX(L.sp - L.lim) - 8, pt + ih + 14); x.fillText('LSE', XX(L.sp + L.lim) - 8, pt + ih + 14); x.fillText('SP', XX(L.sp) - 6, pt + ih + 14);
+                x.fillText('Cpk PI ' + fmt(Math.min(R.mpi.cpk, 9.9), 2) + ' · PID ' + fmt(Math.min(R.mpid.cpk, 9.9), 2), pl + 4, pt + ih + 27);
+            }
+            function drawWear() {
+                var c = setup($('wr')), x = c.x, W = c.w, H = c.h, a = R.mpi.W, b = R.mpid.W, mx = Math.max(a, b, 1e-6), bw = W - 110, ratio = b / Math.max(a, 1e-6);
+                x.font = '600 12px Inter,system-ui,sans-serif';
+                [['PI', a, css('--wr'), 30], ['PID', b, css('--ok'), 84]].forEach(function (r) {
+                    x.fillStyle = css('--mu'); x.fillText(r[0], 6, r[3] + 16); x.fillStyle = css('--bd'); x.fillRect(40, r[3], bw, 24);
+                    x.fillStyle = r[0] === 'PID' && ratio > 4 ? css('--bad') : r[2]; x.fillRect(40, r[3], bw * r[1] / mx, 24);
+                    x.fillStyle = css('--tx'); x.fillText(fmt(r[1], 1) + ' carreras', 44, r[3] + 16);
+                });
+                x.fillStyle = css('--mu'); x.font = '11px Inter,system-ui,sans-serif'; x.fillText('Recorrido total acumulado de la señal de potencia', 40, 18);
+                x.font = '700 13px Inter,system-ui,sans-serif'; x.fillStyle = ratio > 4 ? css('--bad') : css('--tx'); x.fillText('PID = ×' + fmt(ratio, 1) + ' el desgaste de PI', 40, 148);
+            }
+            function hud() {
+                var r = R[SHOW], i = ix(), u = Lp.unit;
+                $('hT').textContent = r.Y[i].toFixed(1) + ' ' + u; $('hS').textContent = Lp.sp + ' ' + u; $('hP').textContent = r.U[i].toFixed(0) + ' %'; $('hE').textContent = (Lp.sp - r.Y[i]).toFixed(1); $('ht').textContent = (i * r.dt).toFixed(1) + ' min';
+            }
+            function frame(ts) {
+                var dt = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
+                if (play.run) {
+                    if (play.t < Lp.T) play.t = Math.min(Lp.T, play.t + dt * Lp.T / 18);
+                    else if ($('auto').checked) { play.hold += dt; if (play.hold > 1.5) restart() }
+                }
+                if (pend && ts - lastR > 140) { pend = false; lastR = ts; renderAll() }
+                hud(); drawOven(); drawTemp(); drawPow(); drawHist(); drawWear();
+                requestAnimationFrame(frame);
+            }
+            setLoop('horno');
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>
